@@ -9,7 +9,6 @@ import JokeGenerator from "@/components/sections/JokeGenerator";
 import MoodMeter from "@/components/sections/MoodMeter";
 import StressWall from "@/components/sections/StressWall";
 import FeaturedArticle from "@/components/sections/FeaturedArticle";
-import StressTestQuiz from "@/components/sections/StressTestQuiz";
 import MemeGallery from "@/components/sections/MemeGallery";
 import Newsletter from "@/components/sections/Newsletter";
 
@@ -56,8 +55,6 @@ export default function App() {
           <StressWall />
 
           <FeaturedArticle />
-
-          <StressTestQuiz />
 
           <MemeGallery />
 

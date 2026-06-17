@@ -9,7 +9,6 @@ const LINKS = [
   { label: "Jokes", href: "#jokes", hover: "HIT!" },
   { label: "Mood", href: "#mood", hover: "VIBE" },
   { label: "Wall", href: "#wall", hover: "VENT" },
-  { label: "Quiz", href: "#quiz", hover: "HONEST" },
   { label: "Vault", href: "#gallery", hover: "ZOOM" },
   { label: "Join", href: "#newsletter", hover: "SUB" },
 ];
