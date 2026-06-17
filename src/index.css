@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+/* ============================================================
+   DESIGN SYSTEM — "O STRESS KALAANA"
+   Neo-Brutalism meets Playful Editorial
+   ============================================================ */
+@theme {
+  /* Color Palette */
+  --color-cream: #fcf7f8;
+  --color-paper: #f4edee;
+  --color-jet: #0b0c10;
+  --color-ink: #1b1c22;
+  --color-electric: #4361ee;
+  --color-electric-dark: #2940b8;
+  --color-pink: #f72585;
+  --color-toxic: #ccff00;
+
+  /* Typography */
+  --font-display: "Bricolage Grotesque", "Inter", sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-hand: "Caveat", cursive;
+
+  /* Brutalist hard offset shadows */
+  --shadow-brutal-xs: 3px 3px 0px #0b0c10;
+  --shadow-brutal-sm: 4px 4px 0px #0b0c10;
+  --shadow-brutal: 8px 8px 0px #0b0c10;
+  --shadow-brutal-lg: 12px 12px 0px #0b0c10;
+  --shadow-brutal-xl: 16px 16px 0px #0b0c10;
+
+  /* Animations */
+  --animate-spin-slow: spin 14s linear infinite;
+  --animate-wiggle: wiggle 2.4s ease-in-out infinite;
+
+  @keyframes wiggle {
+    0%,
+    100% {
+      transform: rotate(-3deg);
+    }
+    50% {
+      transform: rotate(3deg);
+    }
+  }
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: auto; /* Lenis handles smooth scroll */
+  }
+
+  body {
+    background-color: var(--color-cream);
+    color: var(--color-jet);
+    font-family: var(--font-body);
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background-color: var(--color-toxic);
+    color: var(--color-jet);
+  }
+
+  /* Brutalist scrollbar */
+  ::-webkit-scrollbar {
+    width: 14px;
+    height: 14px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-cream);
+    border-left: 2px solid var(--color-jet);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-jet);
+    border: 3px solid var(--color-cream);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-pink);
+  }
+
+  /* Hide native cursor on fine-pointer (desktop) devices — custom cursor takes over */
+  @media (hover: hover) and (pointer: fine) {
+    * {
+      cursor: none !important;
+    }
+  }
+
+  /* Respect reduced-motion preferences for CSS-driven animations */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+
+/* Outline / stroke text — em-based so the stroke scales with font size */
+@utility text-stroke {
+  -webkit-text-stroke: 0.03em var(--color-jet);
+  color: transparent;
+}
+@utility text-stroke-cream {
+  -webkit-text-stroke: 0.035em var(--color-cream);
+  color: transparent;
+}
+@utility text-stroke-thick {
+  -webkit-text-stroke: 0.05em var(--color-jet);
+  color: transparent;
+}
+
+/* Paper grain overlay */
+@utility grain {
+  position: relative;
+}
+@utility grain-layer {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Ensure body grain layer always paints */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
