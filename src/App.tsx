@@ -5,7 +5,11 @@ import CustomCursor from "@/components/ui/CustomCursor";
 import TickerStrip from "@/components/ui/TickerStrip";
 import Hero from "@/components/sections/Hero";
 import BentoGrid from "@/components/sections/BentoGrid";
+import JokeGenerator from "@/components/sections/JokeGenerator";
+import MoodMeter from "@/components/sections/MoodMeter";
 import FeaturedArticle from "@/components/sections/FeaturedArticle";
+import StressTestQuiz from "@/components/sections/StressTestQuiz";
+import MemeGallery from "@/components/sections/MemeGallery";
 import Newsletter from "@/components/sections/Newsletter";
 
 const WARNINGS = [
@@ -32,6 +36,8 @@ export default function App() {
 
           <BentoGrid />
 
+          <JokeGenerator />
+
           <TickerStrip
             items={[
               "Keep scrolling, keep lol'in",
@@ -44,7 +50,14 @@ export default function App() {
             reverse
           />
 
+          <MoodMeter />
+
           <FeaturedArticle />
+
+          <StressTestQuiz />
+
+          <MemeGallery />
+
           <Newsletter />
         </main>
 

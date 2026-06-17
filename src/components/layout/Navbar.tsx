@@ -5,8 +5,11 @@ import Button from "@/components/ui/Button";
 
 const LINKS = [
   { label: "Home", href: "#top", hover: "TOP!" },
-  { label: "Memes", href: "#bento", hover: "LOL" },
-  { label: "The Hot Take", href: "#featured", hover: "READ" },
+  { label: "Feed", href: "#bento", hover: "LOL" },
+  { label: "Jokes", href: "#jokes", hover: "HIT!" },
+  { label: "Mood", href: "#mood", hover: "VIBE" },
+  { label: "Quiz", href: "#quiz", hover: "HONEST" },
+  { label: "Vault", href: "#gallery", hover: "ZOOM" },
   { label: "Join", href: "#newsletter", hover: "SUB" },
 ];
 
