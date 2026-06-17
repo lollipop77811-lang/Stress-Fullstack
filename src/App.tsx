@@ -11,6 +11,8 @@ import StressWall from "@/components/sections/StressWall";
 import FeaturedArticle from "@/components/sections/FeaturedArticle";
 import MemeGallery from "@/components/sections/MemeGallery";
 import Newsletter from "@/components/sections/Newsletter";
+import WhisperWall from "@/components/sections/WhisperWall";
+import { useHashRoute } from "@/hooks/useHashRoute";
 
 const WARNINGS = [
   "⚠️ Warning: May cause uncontrollable laughter",
@@ -21,7 +23,53 @@ const WARNINGS = [
   "Certified chaos, delivered fresh",
 ];
 
+function HomePage() {
+  return (
+    <>
+      <Hero />
+
+      <TickerStrip items={WARNINGS} bg="jet" speed={28} />
+
+      <BentoGrid />
+
+      <JokeGenerator />
+
+      <TickerStrip
+        items={[
+          "Keep scrolling, keep lol'in",
+          "Productivity? Never heard of her",
+          "Your inbox misses the nonsense",
+          "Built different (literally)",
+        ]}
+        bg="toxic"
+        speed={24}
+        reverse
+      />
+
+      <MoodMeter />
+
+      <StressWall />
+
+      <FeaturedArticle />
+
+      <MemeGallery />
+
+      <Newsletter />
+    </>
+  );
+}
+
+function WhisperPage() {
+  return (
+    <div className="bg-jet">
+      <WhisperWall />
+    </div>
+  );
+}
+
 export default function App() {
+  const route = useHashRoute();
+
   return (
     <SmoothScroll>
       <CustomCursor />
@@ -30,35 +78,7 @@ export default function App() {
         <Navbar />
 
         <main className="flex-1">
-          <Hero />
-
-          <TickerStrip items={WARNINGS} bg="jet" speed={28} />
-
-          <BentoGrid />
-
-          <JokeGenerator />
-
-          <TickerStrip
-            items={[
-              "Keep scrolling, keep lol'in",
-              "Productivity? Never heard of her",
-              "Your inbox misses the nonsense",
-              "Built different (literally)",
-            ]}
-            bg="toxic"
-            speed={24}
-            reverse
-          />
-
-          <MoodMeter />
-
-          <StressWall />
-
-          <FeaturedArticle />
-
-          <MemeGallery />
-
-          <Newsletter />
+          {route === "whisper" ? <WhisperPage /> : <HomePage />}
         </main>
 
         <Footer />

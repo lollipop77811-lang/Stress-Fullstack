@@ -414,6 +414,23 @@ export default function StressWall() {
         <p className="sw-reveal mt-8 text-center font-hand text-lg font-bold text-ink/60">
           ↳ posts are anonymous, ephemeral & legally meaningless. like all feelings.
         </p>
+
+        {/* Cross-link CTA → Whisper Wall */}
+        <div className="sw-reveal mt-6 flex justify-center">
+          <a
+            href="#/whisper"
+            data-hover="SHHH"
+            className="group inline-flex items-center gap-3 rounded-2xl border-2 border-jet bg-jet px-6 py-3.5 text-cream shadow-brutal transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-brutal-lg"
+          >
+            <span className="text-xl">🤫</span>
+            <span className="font-display text-sm font-extrabold uppercase tracking-tight sm:text-base">
+              Want true anonymity?
+            </span>
+            <span className="font-hand text-lg font-bold text-toxic">
+              → Whisper Wall
+            </span>
+          </a>
+        </div>
       </div>
     </section>
   );
