@@ -7,6 +7,7 @@ import Hero from "@/components/sections/Hero";
 import BentoGrid from "@/components/sections/BentoGrid";
 import JokeGenerator from "@/components/sections/JokeGenerator";
 import MoodMeter from "@/components/sections/MoodMeter";
+import StressWall from "@/components/sections/StressWall";
 import FeaturedArticle from "@/components/sections/FeaturedArticle";
 import StressTestQuiz from "@/components/sections/StressTestQuiz";
 import MemeGallery from "@/components/sections/MemeGallery";
@@ -51,6 +52,8 @@ export default function App() {
           />
 
           <MoodMeter />
+
+          <StressWall />
 
           <FeaturedArticle />
 
