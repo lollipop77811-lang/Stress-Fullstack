@@ -7,7 +7,7 @@ const LINKS = [
   { label: "Home", href: "#top", hover: "TOP!" },
   { label: "Feed", href: "#bento", hover: "LOL" },
   { label: "Jokes", href: "#jokes", hover: "HIT!" },
-  { label: "Wall", href: "#wall", hover: "VENT" },
+  { label: "Confess", href: "#/wall", hover: "READ" },
   { label: "Whisper", href: "#/whisper", hover: "SHHH" },
   { label: "Join", href: "#newsletter", hover: "SUB" },
 ];

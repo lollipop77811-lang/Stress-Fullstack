@@ -6,10 +6,10 @@ import TickerStrip from "@/components/ui/TickerStrip";
 import Hero from "@/components/sections/Hero";
 import BentoGrid from "@/components/sections/BentoGrid";
 import JokeGenerator from "@/components/sections/JokeGenerator";
-import StressWall from "@/components/sections/StressWall";
 import FeaturedArticle from "@/components/sections/FeaturedArticle";
 import Newsletter from "@/components/sections/Newsletter";
 import WhisperWall from "@/components/sections/WhisperWall";
+import ConfessionWall from "@/components/sections/ConfessionWall";
 import { useHashRoute } from "@/hooks/useHashRoute";
 
 const WARNINGS = [
@@ -44,8 +44,6 @@ function HomePage() {
         reverse
       />
 
-      <StressWall />
-
       <FeaturedArticle />
 
       <Newsletter />
@@ -61,6 +59,10 @@ function WhisperPage() {
   );
 }
 
+function WallPage() {
+  return <ConfessionWall />;
+}
+
 export default function App() {
   const route = useHashRoute();
 
@@ -72,7 +74,13 @@ export default function App() {
         <Navbar />
 
         <main className="flex-1">
-          {route === "whisper" ? <WhisperPage /> : <HomePage />}
+          {route === "whisper" ? (
+            <WhisperPage />
+          ) : route === "wall" ? (
+            <WallPage />
+          ) : (
+            <HomePage />
+          )}
         </main>
 
         <Footer />
