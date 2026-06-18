@@ -191,12 +191,14 @@ function buildWalls(): Wall[] {
       const id = wallIdx * 100 + i + 1;
       // Distribute notes on a loose 5-col x 3-row grid with strong jitter
       // for a "scattered randomly" look rather than a perfect grid.
+      // NOTE: top starts at 28% so notes never overlap the header title
+      // (which occupies the top ~25% of the viewport).
       const col = i % 5;
       const row = Math.floor(i / 5);
       const jitterX = (rand() - 0.5) * 12; // ±6%
-      const jitterY = (rand() - 0.5) * 10; // ±5%
+      const jitterY = (rand() - 0.5) * 8; // ±4%
       const left = 3 + col * 18.5 + jitterX;
-      const top = 10 + row * 27 + jitterY;
+      const top = 28 + row * 22 + jitterY;
       const rot = (rand() - 0.5) * 18; // ±9°
       // Weighted aging: 25% fresh, then ~19% each for the others — so
       // most notes look aged/weathered, matching the "some torn, some old" brief.
@@ -415,8 +417,10 @@ export default function ConfessionWall() {
         }}
       />
 
-      {/* Header — compact, fixed at top of viewport */}
-      <header className="cw-reveal absolute left-0 right-0 top-0 z-30 px-4 pt-6 text-center sm:pt-8">
+      {/* Header — compact, fixed at top of viewport.
+       * All 5 walls share the SAME title: "WALL OF CONFESSION".
+       * The wall-counter badge shows which wall you're currently on. */}
+      <header className="cw-reveal absolute left-0 right-0 top-0 z-30 px-4 pt-5 text-center sm:pt-6">
         <div className="mx-auto max-w-3xl">
           <div className="flex items-center justify-center gap-3">
             <span className="inline-block rotate-[-2deg] rounded-full border-2 border-cream bg-pink px-3 py-1 font-display text-[10px] font-extrabold uppercase tracking-widest text-cream shadow-[3px_3px_0_#0b0c10] sm:text-xs">
@@ -427,11 +431,10 @@ export default function ConfessionWall() {
             </span>
           </div>
           <h2 className="mt-2 font-display text-3xl font-extrabold uppercase leading-[0.9] tracking-tight text-cream drop-shadow-[3px_3px_0_rgba(11,12,16,0.6)] sm:text-5xl">
-            {wall.theme}
+            Wall of
+            <br />
+            <span className="text-toxic">Confession</span>
           </h2>
-          <p className="mt-1 font-hand text-base font-bold text-cream/80 drop-shadow-[1px_1px_0_rgba(11,12,16,0.7)] sm:text-lg">
-            ↳ {wall.subtitle}
-          </p>
         </div>
       </header>
 
