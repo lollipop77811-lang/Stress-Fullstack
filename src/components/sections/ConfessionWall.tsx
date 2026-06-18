@@ -402,7 +402,7 @@ export default function ConfessionWall() {
       style={{
         backgroundColor: "#8b3a2b",
         backgroundImage: BRICK_BG,
-        backgroundSize: "248px 158px",
+        backgroundSize: "375px 108px",
         backgroundRepeat: "repeat",
       }}
     >
