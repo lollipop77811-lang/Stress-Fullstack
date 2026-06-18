@@ -6,10 +6,8 @@ import TickerStrip from "@/components/ui/TickerStrip";
 import Hero from "@/components/sections/Hero";
 import BentoGrid from "@/components/sections/BentoGrid";
 import JokeGenerator from "@/components/sections/JokeGenerator";
-import MoodMeter from "@/components/sections/MoodMeter";
 import StressWall from "@/components/sections/StressWall";
 import FeaturedArticle from "@/components/sections/FeaturedArticle";
-import MemeGallery from "@/components/sections/MemeGallery";
 import Newsletter from "@/components/sections/Newsletter";
 import WhisperWall from "@/components/sections/WhisperWall";
 import { useHashRoute } from "@/hooks/useHashRoute";
@@ -46,13 +44,9 @@ function HomePage() {
         reverse
       />
 
-      <MoodMeter />
-
       <StressWall />
 
       <FeaturedArticle />
-
-      <MemeGallery />
 
       <Newsletter />
     </>
