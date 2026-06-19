@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence, type PanInfo } from "framer-motion";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -389,11 +390,25 @@ export default function ConfessionWall({
   const [userNotes, setUserNotes] = useState<Note[]>([]);
   // Set of confession IDs (as strings) that the current user has posted
   const [mine, setMine] = useState<Set<string>>(() => loadMine());
+  // The note currently in flight (composer → wall). When set, a FlyingNote
+  // portal is rendered; on landing it's swapped for a real wall note.
+  const [flyingNote, setFlyingNote] = useState<{
+    note: Note;
+    sourceX: number;
+    sourceY: number;
+    targetX: number;
+    targetY: number;
+  } | null>(null);
 
   const wall = WALLS[wallIdx];
 
   /* Register the new-confession handler with the parent so the composer
-   * can call it. */
+   * can call it. Orchestrates the flying-note animation:
+   *   1. Update `mine` + localStorage
+   *   2. If reduced-motion: just add the note + scroll
+   *   3. Else: scroll to wall → wait → spawn flying note → on landing,
+   *      add to userNotes + dust puffs + wall shake
+   */
   useEffect(() => {
     onNewConfession((c: UserConfession) => {
       const idStr = String(c.id);
@@ -401,14 +416,117 @@ export default function ConfessionWall({
       newMine.add(idStr);
       setMine(newMine);
       saveMine(newMine);
-      // If the confession belongs to the currently-viewed wall, add it now.
-      if (c.wallIdx === wallIdx) {
-        setUserNotes((prev) => [userConfessionToNote(c, true), ...prev]);
+
+      if (c.wallIdx !== wallIdx) return; // shouldn't happen, but guard
+
+      const futureNote = userConfessionToNote(c, true);
+      const prefersReduced = window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches;
+
+      if (prefersReduced) {
+        // Skip the flight — just add the note + scroll
+        setUserNotes((prev) => [futureNote, ...prev]);
+        document.getElementById("wall")?.scrollIntoView({ behavior: "smooth" });
+        return;
       }
-      // Smooth-scroll back up to the wall so the user sees their note appear
+
+      // Smooth-scroll to the wall first so the user can see the landing
       document.getElementById("wall")?.scrollIntoView({ behavior: "smooth" });
+
+      // Wait for scroll to settle, then spawn the flying note
+      window.setTimeout(() => {
+        const composerEl = document.querySelector("[data-composer-card]");
+        const wallArea = root.current?.querySelector(
+          ".relative.h-full.w-full"
+        ) as HTMLElement | null;
+
+        if (!composerEl || !wallArea) {
+          // Fallback: just add the note
+          setUserNotes((prev) => [futureNote, ...prev]);
+          return;
+        }
+
+        const composerRect = composerEl.getBoundingClientRect();
+        const wallRect = wallArea.getBoundingClientRect();
+
+        // Source: top-center of the composer card
+        const sourceX = composerRect.left + composerRect.width / 2;
+        const sourceY = composerRect.top + 20;
+
+        // Target: the note's deterministic position on the wall
+        const targetX = wallRect.left + (futureNote.left / 100) * wallRect.width;
+        const targetY = wallRect.top + (futureNote.top / 100) * wallRect.height;
+
+        setFlyingNote({
+          note: futureNote,
+          sourceX,
+          sourceY,
+          targetX,
+          targetY,
+        });
+      }, 450);
     });
   }, [wallIdx, mine, onNewConfession]);
+
+  /* Clean up flying note if wall changes mid-flight */
+  useEffect(() => {
+    setFlyingNote(null);
+  }, [wallIdx]);
+
+  /** Called when the FlyingNote finishes its animation. Swaps it for the
+   *  real wall note + triggers dust puffs + wall shake. */
+  function handleFlyingNoteLanded() {
+    if (!flyingNote) return;
+    setUserNotes((prev) => [flyingNote.note, ...prev]);
+    spawnDustPuffs(flyingNote.targetX, flyingNote.targetY);
+    shakeWall();
+    setFlyingNote(null);
+  }
+
+  /** Spawn 5 dust-puff particles at the landing point. */
+  function spawnDustPuffs(x: number, y: number) {
+    for (let i = 0; i < 5; i++) {
+      const p = document.createElement("div");
+      p.style.cssText = `
+        position: fixed;
+        width: 8px; height: 8px;
+        background: rgba(252,247,248,0.7);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9998;
+        left: ${x + (Math.random() - 0.5) * 60}px;
+        top: ${y + (Math.random() - 0.5) * 20}px;
+      `;
+      document.body.appendChild(p);
+      const dx = (Math.random() - 0.5) * 80;
+      const dy = -20 - Math.random() * 30;
+      p.animate(
+        [
+          { transform: "translate(0,0) scale(1)", opacity: 0.9 },
+          { transform: `translate(${dx}px, ${dy}px) scale(0.3)`, opacity: 0 },
+        ],
+        { duration: 600, easing: "ease-out" }
+      );
+      window.setTimeout(() => p.remove(), 650);
+    }
+  }
+
+  /** Subtle 2px wall shake on landing. */
+  function shakeWall() {
+    const el = root.current;
+    if (!el) return;
+    el.animate(
+      [
+        { transform: "translate(0,0)" },
+        { transform: "translate(-2px,1px)" },
+        { transform: "translate(2px,-1px)" },
+        { transform: "translate(-1px,2px)" },
+        { transform: "translate(0,0)" },
+      ],
+      { duration: 200, easing: "ease-out" }
+    );
+  }
 
   /* Fetch user confessions whenever wallIdx changes */
   useEffect(() => {
@@ -755,6 +873,22 @@ export default function ConfessionWall({
         ✍️ write yours ↓
       </a>
 
+      {/* Flying note portal — rendered to document.body so it's not clipped
+          by the wall's overflow:hidden. Animates from composer to wall. */}
+      {flyingNote &&
+        createPortal(
+          <FlyingNote
+            key={String(flyingNote.note.id)}
+            note={flyingNote.note}
+            sourceX={flyingNote.sourceX}
+            sourceY={flyingNote.sourceY}
+            targetX={flyingNote.targetX}
+            targetY={flyingNote.targetY}
+            onLanded={handleFlyingNoteLanded}
+          />,
+          document.body
+        )}
+
       {/* Enlarge modal */}
       <AnimatePresence>
         {open && (
@@ -856,5 +990,122 @@ export default function ConfessionWall({
         )}
       </AnimatePresence>
     </section>
+  );
+}
+
+/* ============================================================
+   FlyingNote — the note that flies from composer to wall.
+   Rendered via createPortal to document.body with position: fixed
+   so it can travel across the entire viewport without being clipped
+   by the wall's overflow:hidden or any parent transforms.
+   ============================================================ */
+
+function FlyingNote({
+  note,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  onLanded,
+}: {
+  note: Note;
+  sourceX: number;
+  sourceY: number;
+  targetX: number;
+  targetY: number;
+  onLanded: () => void;
+}) {
+  const col = COLOR_MAP[note.color];
+  const ag = agingStyle(note.aging);
+
+  // Arc peak: 120px above the higher of source/target
+  const midX = (sourceX + targetX) / 2;
+  const midY = Math.min(sourceY, targetY) - 120;
+
+  return (
+    <motion.div
+      initial={{
+        x: sourceX,
+        y: sourceY,
+        scale: 1,
+        rotate: -3,
+        opacity: 1,
+      }}
+      animate={{
+        // 5 keyframes: lift-off → arc peak → descent → squish → settle
+        x: [sourceX, sourceX + (midX - sourceX) * 0.3, midX, targetX, targetX],
+        y: [sourceY, sourceY - 20, midY, targetY, targetY],
+        scale: [1, 1.15, 1.05, 0.92, 1],
+        rotate: [-3, -8, -12, -4, -4],
+      }}
+      transition={{
+        duration: 0.9,
+        times: [0, 0.2, 0.5, 0.85, 1],
+        ease: "easeInOut",
+      }}
+      onAnimationComplete={onLanded}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: `${note.w}px`,
+        backgroundColor: col.bg,
+        color: col.text,
+        border: "3px solid #0b0c10",
+        borderRadius: 12,
+        padding: 12,
+        boxShadow: "6px 6px 0 rgba(11,12,16,0.6)",
+        zIndex: 9999,
+        pointerEvents: "none",
+        transformOrigin: "center",
+        filter: ag.filter,
+        opacity: ag.opacity,
+        clipPath: ag.clipPath,
+      }}
+    >
+      {/* Tape strip */}
+      <span
+        aria-hidden
+        style={{
+          position: "absolute",
+          top: -8,
+          left: "50%",
+          transform: "translateX(-50%) rotate(1deg)",
+          width: 48,
+          height: 18,
+          backgroundColor: col.tape,
+          borderRadius: 3,
+          boxShadow: "0 1px 2px rgba(11,12,16,0.2)",
+        }}
+      />
+      {/* Folded corner (skip on torn) */}
+      {note.aging !== "torn" && (
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            right: 0,
+            top: 0,
+            width: 0,
+            height: 0,
+            borderTop: `12px solid ${col.edge}`,
+            borderRight: "12px solid transparent",
+          }}
+        />
+      )}
+      {/* Text */}
+      <p
+        style={{
+          fontFamily: '"Caveat", cursive',
+          fontWeight: 700,
+          fontSize: 16,
+          lineHeight: 1.2,
+          margin: 0,
+          position: "relative",
+        }}
+      >
+        {note.text}
+      </p>
+    </motion.div>
   );
 }

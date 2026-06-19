@@ -167,6 +167,7 @@ export default function ConfessionComposer({ wallIdx, onSubmitted }: Props) {
               color: palette.text,
               boxShadow: "10px 10px 0 #0b0c10",
             }}
+            data-composer-card
           >
             {/* Top-right fold corner */}
             <span
