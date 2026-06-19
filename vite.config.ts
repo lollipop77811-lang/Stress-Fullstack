@@ -16,4 +16,15 @@ export default defineConfig({
       "@": path.resolve(__dirname, "src"),
     },
   },
+  server: {
+    // Proxy /api/* to the backend dev server (server/) so the frontend
+    // can call relative '/api/...' URLs without CORS setup.
+    // Falls back to localhost:5000; override via VITE_BACKEND_URL.
+    proxy: {
+      "/api": {
+        target: process.env.VITE_BACKEND_URL ?? "http://localhost:5000",
+        changeOrigin: true,
+      },
+    },
+  },
 });

@@ -41,9 +41,18 @@ export type CreateResponse = {
   wallCap: number;
 };
 
+/**
+ * API base URL.
+ *
+ * - In DEV: relative "/api" — Vite proxies it to the backend at
+ *   http://localhost:5000 (see vite.config.ts → server.proxy). Override
+ *   with VITE_BACKEND_URL if your backend runs on a different port.
+ * - In PROD: relative "/api" — assumes the backend is served from the
+ *   same origin (recommended), OR set VITE_API_URL to an absolute URL
+ *   if the backend lives on a different host.
+ */
 const API_URL =
-  (import.meta.env.VITE_API_URL as string | undefined) ??
-  "http://localhost:5000/api";
+  (import.meta.env.VITE_API_URL as string | undefined) ?? "/api";
 
 export class ApiError extends Error {
   status: number;
