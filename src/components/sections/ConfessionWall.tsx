@@ -3,6 +3,10 @@ import { motion, AnimatePresence, type PanInfo } from "framer-motion";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { BRICK_BG } from "@/assets/brickBg";
+import {
+  listConfessions,
+  type Confession as UserConfession,
+} from "@/lib/confessionsApi";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -14,7 +18,8 @@ type Color = "yellow" | "pink" | "blue" | "green" | "orange" | "purple";
 type Aging = "fresh" | "faded" | "torn" | "crumpled" | "old";
 
 type Note = {
-  id: number;
+  /** Numeric id for seed notes (e.g. 4740); string Mongo id for user notes */
+  id: number | string;
   text: string;
   author: string;
   color: Color;
@@ -23,6 +28,8 @@ type Note = {
   left: number;
   rot: number; // deg
   w: number; // px width (varies for realism)
+  /** True if this note was added by the current user (shows "★ yours" badge) */
+  isMine?: boolean;
 };
 
 type Wall = {
@@ -298,14 +305,125 @@ function agingStyle(aging: Aging): {
 
 const WALLS = buildWalls();
 
-export default function ConfessionWall() {
+/* localStorage key for tracking which confession IDs are the current
+ * user's (so the "★ yours" badge persists across refreshes). */
+const MINE_KEY = "osk.confessions.mine.v1";
+
+function loadMine(): Set<string> {
+  try {
+    const raw = localStorage.getItem(MINE_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr)) return new Set(arr.filter((x) => typeof x === "string"));
+  } catch {
+    /* ignore */
+  }
+  return new Set();
+}
+
+function saveMine(set: Set<string>) {
+  try {
+    localStorage.setItem(MINE_KEY, JSON.stringify([...set]));
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Convert a user confession fetched from the API into a Note the wall
+ * can render. Positions are assigned deterministically by hashing the
+ * confession id so the same note always lands in the same spot.
+ */
+function userConfessionToNote(c: UserConfession, isMine: boolean): Note {
+  // Hash the id → 0..1 for position & rotation
+  const str = typeof c.id === "string" ? c.id : String(c.id);
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  }
+  const rand = (seed: number) => ((h ^ (seed * 2654435761)) >>> 0) / 4294967296;
+
+  // Distribute across 5 cols × 3 rows, like seed notes
+  const slot = Math.floor(rand(1) * 15);
+  const col = slot % 5;
+  const row = Math.floor(slot / 5);
+  const jitterX = (rand(2) - 0.5) * 12;
+  const jitterY = (rand(3) - 0.5) * 8;
+  const left = 3 + col * 18.5 + jitterX;
+  const top = 28 + row * 22 + jitterY;
+  const rot = (rand(4) - 0.5) * 18;
+  const w = 150 + Math.floor(rand(5) * 60);
+
+  return {
+    id: c.id,
+    text: c.text,
+    author: c.author,
+    color: c.color as Color,
+    aging: c.aging as Aging,
+    top,
+    left,
+    rot,
+    w,
+    isMine,
+  };
+}
+
+export default function ConfessionWall({
+  wallIdx,
+  onWallIdxChange,
+  onNewConfession,
+}: {
+  /** Controlled wall index (lifted to parent so composer knows which wall) */
+  wallIdx: number;
+  onWallIdxChange: (next: number, direction: 1 | -1) => void;
+  /** Called when a new user confession is created (lifted to parent so
+   *  the composer can trigger it). Receives the new confession. */
+  onNewConfession: (cb: (c: UserConfession) => void) => void;
+}) {
   const root = useRef<HTMLDivElement>(null);
-  const [wallIdx, setWallIdx] = useState(0);
   const [direction, setDirection] = useState(1); // 1 = next, -1 = prev
   const [open, setOpen] = useState<Note | null>(null);
   const [dragHint, setDragHint] = useState(true);
 
+  // User confessions fetched from the backend (per wall)
+  const [userNotes, setUserNotes] = useState<Note[]>([]);
+  // Set of confession IDs (as strings) that the current user has posted
+  const [mine, setMine] = useState<Set<string>>(() => loadMine());
+
   const wall = WALLS[wallIdx];
+
+  /* Register the new-confession handler with the parent so the composer
+   * can call it. */
+  useEffect(() => {
+    onNewConfession((c: UserConfession) => {
+      const idStr = String(c.id);
+      const newMine = new Set(mine);
+      newMine.add(idStr);
+      setMine(newMine);
+      saveMine(newMine);
+      // If the confession belongs to the currently-viewed wall, add it now.
+      if (c.wallIdx === wallIdx) {
+        setUserNotes((prev) => [userConfessionToNote(c, true), ...prev]);
+      }
+      // Smooth-scroll back up to the wall so the user sees their note appear
+      document.getElementById("wall")?.scrollIntoView({ behavior: "smooth" });
+    });
+  }, [wallIdx, mine, onNewConfession]);
+
+  /* Fetch user confessions whenever wallIdx changes */
+  useEffect(() => {
+    let cancelled = false;
+    listConfessions(wallIdx).then((list) => {
+      if (cancelled) return;
+      const notes = list.map((c) =>
+        userConfessionToNote(c, mine.has(String(c.id)))
+      );
+      setUserNotes(notes);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [wallIdx, mine]);
 
   /* GSAP reveal of header on first mount */
   useLayoutEffect(() => {
@@ -377,12 +495,12 @@ export default function ConfessionWall() {
 
   const goNext = () => {
     setDirection(1);
-    setWallIdx((i) => (i + 1) % WALLS.length);
+    onWallIdxChange((wallIdx + 1) % WALLS.length, 1);
     setDragHint(false);
   };
   const goPrev = () => {
     setDirection(-1);
-    setWallIdx((i) => (i - 1 + WALLS.length) % WALLS.length);
+    onWallIdxChange((wallIdx - 1 + WALLS.length) % WALLS.length, -1);
     setDragHint(false);
   };
 
@@ -456,8 +574,8 @@ export default function ConfessionWall() {
             transition={{ type: "spring", stiffness: 280, damping: 28 }}
             className="relative h-full w-full"
           >
-            {/* 15 sticky notes scattered on this wall */}
-            {wall.notes.map((n) => {
+            {/* 15 seed sticky notes + any user confessions for this wall */}
+            {[...userNotes, ...wall.notes].map((n) => {
               const col = COLOR_MAP[n.color];
               const ag = agingStyle(n.aging);
               const style: CSSProperties = {
@@ -526,6 +644,13 @@ export default function ConfessionWall() {
                       />
                     )}
 
+                    {/* "★ yours" badge — only on notes the current user posted */}
+                    {n.isMine && (
+                      <span className="absolute -left-2 -top-2 z-10 rotate-[-6deg] rounded-full border-2 border-jet bg-jet px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-toxic shadow-[2px_2px_0_#fcf7f8]">
+                        ★ yours
+                      </span>
+                    )}
+
                     {/* Truncated confession text */}
                     <p className="relative line-clamp-5 font-hand text-sm font-bold leading-snug sm:text-base">
                       {n.text}
@@ -588,7 +713,7 @@ export default function ConfessionWall() {
               key={w.id}
               onClick={() => {
                 setDirection(i > wallIdx ? 1 : -1);
-                setWallIdx(i);
+                onWallIdxChange(i, i > wallIdx ? 1 : -1);
                 setDragHint(false);
               }}
               aria-label={`Go to wall ${i + 1}`}
@@ -619,6 +744,15 @@ export default function ConfessionWall() {
         className="cw-reveal absolute left-4 top-6 z-30 inline-flex items-center gap-1.5 rounded-xl border-2 border-cream bg-jet px-3 py-2 font-display text-xs font-bold uppercase tracking-tight text-cream shadow-[3px_3px_0_#fcf7f8] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#fcf7f8]"
       >
         ← home
+      </a>
+
+      {/* "Write your own" CTA — top-right, scrolls down to the composer */}
+      <a
+        href="#composer"
+        data-hover="WRITE!"
+        className="cw-reveal absolute right-4 top-6 z-30 inline-flex items-center gap-1.5 rounded-xl border-2 border-jet bg-toxic px-3 py-2 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-[3px_3px_0_#0b0c10] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#0b0c10]"
+      >
+        ✍️ write yours ↓
       </a>
 
       {/* Enlarge modal */}
@@ -682,6 +816,13 @@ export default function ConfessionWall() {
                     borderRight: "18px solid transparent",
                   }}
                 />
+              )}
+
+              {/* "★ yours" badge — only on user's own notes */}
+              {open.isMine && (
+                <span className="absolute -left-3 -top-3 z-10 rotate-[-6deg] rounded-full border-2 border-jet bg-jet px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-toxic shadow-[3px_3px_0_#fcf7f8]">
+                  ★ yours
+                </span>
               )}
 
               {/* Meta */}

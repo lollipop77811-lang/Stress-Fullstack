@@ -1,3 +1,4 @@
+import { useCallback, useRef, useState } from "react";
 import SmoothScroll from "@/components/layout/SmoothScroll";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -10,7 +11,9 @@ import FeaturedArticle from "@/components/sections/FeaturedArticle";
 import Newsletter from "@/components/sections/Newsletter";
 import WhisperWall from "@/components/sections/WhisperWall";
 import ConfessionWall from "@/components/sections/ConfessionWall";
+import ConfessionComposer from "@/components/sections/ConfessionComposer";
 import { useHashRoute } from "@/hooks/useHashRoute";
+import type { Confession as UserConfession } from "@/lib/confessionsApi";
 
 const WARNINGS = [
   "⚠️ Warning: May cause uncontrollable laughter",
@@ -59,8 +62,50 @@ function WhisperPage() {
   );
 }
 
+/**
+ * WallPage holds the shared `wallIdx` state and a ref to the
+ * "new confession" handler exposed by ConfessionWall. The composer
+ * calls that handler when the user submits, and the new note appears
+ * on the wall.
+ */
 function WallPage() {
-  return <ConfessionWall />;
+  const [wallIdx, setWallIdx] = useState(0);
+  // The ConfessionWall registers its new-confession handler here.
+  const newConfessionHandlerRef = useRef<((c: UserConfession) => void) | null>(
+    null
+  );
+
+  const handleWallIdxChange = useCallback(
+    (next: number, _direction: 1 | -1) => {
+      setWallIdx(next);
+    },
+    []
+  );
+
+  const handleRegisterNewConfessionCb = useCallback(
+    (cb: (c: UserConfession) => void) => {
+      newConfessionHandlerRef.current = cb;
+    },
+    []
+  );
+
+  const handleComposerSubmitted = useCallback((c: UserConfession) => {
+    newConfessionHandlerRef.current?.(c);
+  }, []);
+
+  return (
+    <>
+      <ConfessionWall
+        wallIdx={wallIdx}
+        onWallIdxChange={handleWallIdxChange}
+        onNewConfession={handleRegisterNewConfessionCb}
+      />
+      <ConfessionComposer
+        wallIdx={wallIdx}
+        onSubmitted={handleComposerSubmitted}
+      />
+    </>
+  );
 }
 
 export default function App() {
