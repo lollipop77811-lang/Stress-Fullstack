@@ -12,6 +12,7 @@ import Newsletter from "@/components/sections/Newsletter";
 import WhisperWall from "@/components/sections/WhisperWall";
 import ConfessionWall from "@/components/sections/ConfessionWall";
 import ConfessionComposer from "@/components/sections/ConfessionComposer";
+import MyConfessions from "@/components/sections/MyConfessions";
 import { useHashRoute } from "@/hooks/useHashRoute";
 import type { Confession as UserConfession } from "@/lib/confessionsApi";
 
@@ -60,6 +61,12 @@ function WhisperPage() {
       <WhisperWall />
     </div>
   );
+}
+
+/** "★ My Confessions" page — shows every confession the current user
+ *  has posted, pulled from the backend by ID (tracked in localStorage). */
+function MinePage() {
+  return <MyConfessions />;
 }
 
 /**
@@ -123,6 +130,8 @@ export default function App() {
             <WhisperPage />
           ) : route === "wall" ? (
             <WallPage />
+          ) : route === "mine" ? (
+            <MinePage />
           ) : (
             <HomePage />
           )}

@@ -24,6 +24,9 @@ export type Confession = {
   aging: ConfessionAging;
   wallIdx: number;
   createdAt: string;
+  /** Only returned by GET /api/mine — true if the confession has been
+   *  archived off its wall (wall-cap eviction). */
+  isArchived?: boolean;
 };
 
 export type NewConfession = {
@@ -99,6 +102,30 @@ export async function listConfessions(wallIdx: number): Promise<Confession[]> {
     return data.confessions;
   } catch (err) {
     console.warn("[confessionsApi] listConfessions failed:", err);
+    return [];
+  }
+}
+
+/**
+ * Fetch the user's own confessions by ID.
+ *
+ * The IDs come from localStorage (osk.confessions.mine.v1) — the server
+ * doesn't track ownership, only the client does. Returns confessions
+ * regardless of wallIdx or archived state, newest first.
+ *
+ * Returns empty array on error so the page renders gracefully.
+ */
+export async function listMyConfessions(ids: string[]): Promise<Confession[]> {
+  if (ids.length === 0) return [];
+  try {
+    const url = `${API_URL}/mine?ids=${encodeURIComponent(ids.join(","))}`;
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+    });
+    const data = await handle<{ confessions: Confession[] }>(res);
+    return data.confessions;
+  } catch (err) {
+    console.warn("[confessionsApi] listMyConfessions failed:", err);
     return [];
   }
 }

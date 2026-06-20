@@ -1,7 +1,8 @@
-// Routes for /api/confessions and /api/walls/:wallIdx/confessions
+// Routes for /api/confessions, /api/walls/:wallIdx/confessions, /api/mine
 
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
+import mongoose from "mongoose";
 import Confession, {
   ALLOWED_COLORS,
   ALLOWED_AGINGS,
@@ -20,6 +21,61 @@ const postLimiter = rateLimit({
   message: {
     error: "slow down, the wall needs to breathe. try again in 30s.",
   },
+});
+
+/**
+ * GET /api/mine?ids=id1,id2,id3
+ * Returns the full confession documents for the given IDs (regardless of
+ * wallIdx or archived state — so the user can see their own history even
+ * after it gets archived off a wall).
+ *
+ * Used by the "★ My Confessions" page on the frontend. The IDs come from
+ * the user's localStorage (osk.confessions.mine.v1) — the server doesn't
+ * track who owns what, only the client does.
+ */
+router.get("/mine", async (req, res) => {
+  const rawIds = String(req.query.ids || "");
+  const ids = rawIds
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (ids.length === 0) {
+    return res.json({ count: 0, confessions: [] });
+  }
+
+  // Validate that all IDs are valid ObjectId strings — Mongoose throws on
+  // invalid ones, so filter them out rather than 500-ing the whole request.
+  const validIds = ids.filter((id) => mongoose.isValidObjectId(id));
+  if (validIds.length === 0) {
+    return res.status(400).json({ error: "no valid ids provided" });
+  }
+
+  try {
+    const docs = await Confession.find({
+      _id: { $in: validIds.map((id) => new mongoose.Types.ObjectId(id)) },
+    })
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec();
+
+    return res.json({
+      count: docs.length,
+      confessions: docs.map((c) => ({
+        id: c._id.toString(),
+        text: c.text,
+        author: c.author,
+        color: c.color,
+        aging: c.aging,
+        wallIdx: c.wallIdx,
+        isArchived: c.isArchived,
+        createdAt: c.createdAt,
+      })),
+    });
+  } catch (err) {
+    console.error("[mine] error:", err);
+    return res.status(500).json({ error: "failed to fetch your confessions" });
+  }
 });
 
 /**

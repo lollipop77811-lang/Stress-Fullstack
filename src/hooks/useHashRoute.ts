@@ -2,21 +2,23 @@ import { useEffect, useState } from "react";
 
 /**
  * Routes:
- *   "" / "#top" / "#bento" / ... → "home"  (anchor-based in-page nav)
- *   "#/whisper"                  → "whisper"
- *   "#/wall"                     → "wall"
+ *   "" / "#top" / "#bento" / ... → "home"    (anchor-based in-page nav)
+ *   "#/whisper"                  → "whisper" (anonymous ephemeral confessions)
+ *   "#/wall"                     → "wall"    (5-wall brick confession page)
+ *   "#/mine"                     → "mine"    (user's own confessions)
  *
  * Anything that starts with "#/" is treated as a route. Everything else
  * (including empty hash and section anchors) falls back to "home" so the
  * existing in-page navigation keeps working as-is.
  */
-export type Route = "home" | "whisper" | "wall";
+export type Route = "home" | "whisper" | "wall" | "mine";
 
 function parse(): Route {
   if (typeof window === "undefined") return "home";
   const h = window.location.hash;
   if (h.startsWith("#/whisper")) return "whisper";
   if (h.startsWith("#/wall")) return "wall";
+  if (h.startsWith("#/mine")) return "mine";
   return "home";
 }
 
@@ -31,12 +33,12 @@ export function useHashRoute(): Route {
 
   // Scroll to top whenever we switch to a dedicated route page
   useEffect(() => {
-    if (route === "whisper" || route === "wall") {
+    if (route === "whisper" || route === "wall" || route === "mine") {
       window.scrollTo(0, 0);
     }
   }, [route]);
 
-  // When switching back to home via an anchor (e.g. from #/wall → #bento),
+  // When switching back to home via an anchor (e.g. from #/whisper → #bento),
   // the target element may not exist yet because React hasn't re-rendered.
   // Wait a tick, then scroll into view.
   useEffect(() => {

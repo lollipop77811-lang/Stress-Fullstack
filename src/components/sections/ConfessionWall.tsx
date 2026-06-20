@@ -864,14 +864,25 @@ export default function ConfessionWall({
         ← home
       </a>
 
-      {/* "Write your own" CTA — top-right, scrolls down to the composer */}
-      <a
-        href="#composer"
-        data-hover="WRITE!"
-        className="cw-reveal absolute right-4 top-6 z-30 inline-flex items-center gap-1.5 rounded-xl border-2 border-jet bg-toxic px-3 py-2 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-[3px_3px_0_#0b0c10] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#0b0c10]"
-      >
-        ✍️ write yours ↓
-      </a>
+      {/* Top-right CTA cluster: "My Confessions" + "Write yours" */}
+      <div className="cw-reveal absolute right-4 top-6 z-30 flex flex-wrap items-center justify-end gap-2">
+        {/* My Confessions — opens #/mine route showing all user's confessions */}
+        <a
+          href="#/mine"
+          data-hover="MINE!"
+          className="inline-flex items-center gap-1.5 rounded-xl border-2 border-cream bg-pink px-3 py-2 font-display text-xs font-bold uppercase tracking-tight text-cream shadow-[3px_3px_0_#0b0c10] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#0b0c10]"
+        >
+          ★ my confessions
+        </a>
+        {/* Write your own — scrolls down to the composer */}
+        <a
+          href="#composer"
+          data-hover="WRITE!"
+          className="inline-flex items-center gap-1.5 rounded-xl border-2 border-jet bg-toxic px-3 py-2 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-[3px_3px_0_#0b0c10] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#0b0c10]"
+        >
+          ✍️ write yours ↓
+        </a>
+      </div>
 
       {/* Flying note portal — rendered to document.body so it's not clipped
           by the wall's overflow:hidden. Animates from composer to wall. */}
