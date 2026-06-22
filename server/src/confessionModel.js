@@ -8,7 +8,7 @@ import mongoose from "mongoose";
 
 const ALLOWED_COLORS = ["yellow", "pink", "blue", "green", "orange", "purple"];
 const ALLOWED_AGINGS = ["fresh", "faded", "torn", "crumpled", "old"];
-const WALL_CAP = 20; // max confessions per wall before next wall is spawned
+const WALL_CAP = 15; // max confessions per wall before next wall is spawned
 
 const confessionSchema = new mongoose.Schema(
   {
