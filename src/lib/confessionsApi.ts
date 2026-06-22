@@ -39,8 +39,18 @@ export type NewConfession = {
 
 export type CreateResponse = {
   confession: Confession;
-  archivedOldest: { id: string } | null;
+  requestedWallIdx: number;
+  actualWallIdx: number;
   wallCount: number;
+  wallCap: number;
+  /** True if the confession was spawned on a different wall than requested
+   *  (because the requested wall was full). */
+  spawnedNewWall: boolean;
+};
+
+export type WallStats = {
+  totalWalls: number;
+  totalConfessions: number;
   wallCap: number;
 };
 
@@ -127,6 +137,22 @@ export async function listMyConfessions(ids: string[]): Promise<Confession[]> {
   } catch (err) {
     console.warn("[confessionsApi] listMyConfessions failed:", err);
     return [];
+  }
+}
+
+/**
+ * Fetch summary stats about all walls (total wall count, total confessions).
+ * Returns null on error.
+ */
+export async function getWallStats(): Promise<WallStats | null> {
+  try {
+    const res = await fetch(`${API_URL}/walls/stats`, {
+      headers: { Accept: "application/json" },
+    });
+    return await handle<WallStats>(res);
+  } catch (err) {
+    console.warn("[confessionsApi] getWallStats failed:", err);
+    return null;
   }
 }
 

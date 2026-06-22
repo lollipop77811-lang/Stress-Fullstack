@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 import SmoothScroll from "@/components/layout/SmoothScroll";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -13,7 +13,7 @@ import WhisperWall from "@/components/sections/WhisperWall";
 import ConfessionWall from "@/components/sections/ConfessionWall";
 import ConfessionComposer from "@/components/sections/ConfessionComposer";
 import MyConfessions from "@/components/sections/MyConfessions";
-import { useHashRoute } from "@/hooks/useHashRoute";
+import { useHashRoute, wallUrl } from "@/hooks/useHashRoute";
 import type { Confession as UserConfession } from "@/lib/confessionsApi";
 
 const WARNINGS = [
@@ -70,24 +70,21 @@ function MinePage() {
 }
 
 /**
- * WallPage holds the shared `wallIdx` state and a ref to the
- * "new confession" handler exposed by ConfessionWall. The composer
- * calls that handler when the user submits, and the new note appears
- * on the wall.
+ * WallPage is URL-driven. The wallIdx comes from the hash (#/wall/N → N-1).
+ * If no wall is specified (#/wall), it defaults to wall 0 (the newest).
+ *
+ * The ConfessionWall registers its new-confession handler here so the
+ * composer can trigger the flying-note animation.
  */
-function WallPage() {
-  const [wallIdx, setWallIdx] = useState(0);
-  // The ConfessionWall registers its new-confession handler here.
+function WallPage({ wallIdx }: { wallIdx: number }) {
   const newConfessionHandlerRef = useRef<((c: UserConfession) => void) | null>(
     null
   );
 
-  const handleWallIdxChange = useCallback(
-    (next: number, _direction: 1 | -1) => {
-      setWallIdx(next);
-    },
-    []
-  );
+  const handleNavigate = useCallback((nextWallIdx: number) => {
+    // Update the URL — the route hook will re-render with the new wallIdx
+    window.location.hash = wallUrl(nextWallIdx);
+  }, []);
 
   const handleRegisterNewConfessionCb = useCallback(
     (cb: (c: UserConfession) => void) => {
@@ -104,7 +101,7 @@ function WallPage() {
     <>
       <ConfessionWall
         wallIdx={wallIdx}
-        onWallIdxChange={handleWallIdxChange}
+        onNavigate={handleNavigate}
         onNewConfession={handleRegisterNewConfessionCb}
       />
       <ConfessionComposer
@@ -116,7 +113,7 @@ function WallPage() {
 }
 
 export default function App() {
-  const route = useHashRoute();
+  const { route, wallIdx } = useHashRoute();
 
   return (
     <SmoothScroll>
@@ -129,7 +126,7 @@ export default function App() {
           {route === "whisper" ? (
             <WhisperPage />
           ) : route === "wall" ? (
-            <WallPage />
+            <WallPage wallIdx={wallIdx ?? 0} />
           ) : route === "mine" ? (
             <MinePage />
           ) : (

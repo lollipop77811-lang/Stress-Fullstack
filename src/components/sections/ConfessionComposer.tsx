@@ -107,8 +107,8 @@ export default function ConfessionComposer({ wallIdx, onSubmitted }: Props) {
       setAging("fresh");
       showToast(
         "ok",
-        result.archivedOldest
-          ? "stuck. 👍 (the oldest note on this wall made way for yours.)"
+        result.spawnedNewWall
+          ? `stuck. 👍 wall ${result.actualWallIdx + 1} is fresh — you're the first to pin here.`
           : "stuck. 👍 your secret is now legally binding."
       );
     } catch (err) {

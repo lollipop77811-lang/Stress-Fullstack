@@ -33,11 +33,6 @@ type Note = {
   isMine?: boolean;
 };
 
-type Wall = {
-  id: number;
-  notes: Note[];
-};
-
 /* ============================================================
    STICKY NOTE COLORS (Post-it palette)
    ============================================================ */
@@ -53,170 +48,6 @@ const COLOR_MAP: Record<
   orange: { bg: "#ffe0c2", edge: "#e0b88e", tape: "rgba(255,255,255,0.55)", text: "#1b1c22" },
   purple: { bg: "#ddd0f0", edge: "#b3a3d8", tape: "rgba(255,255,255,0.55)", text: "#1b1c22" },
 };
-
-/* ============================================================
-   75 CONFESSIONS — one shared pool, distributed evenly across
-   all 5 walls (15 per wall). Walls are NOT categorized — every
-   wall is identical in theme, just shows a different 15-confession
-   slice of the same pool.
-   ============================================================ */
-
-const ALL_CONFESSIONS: string[] = [
-  "I've been pretending to understand my job for 3 years. Nobody has noticed. The fear is constant.",
-  "Reply 'sounds good!' to emails that absolutely do not sound good.",
-  "My manager: 'Just a quick call.' It has been 2 hours.",
-  "I told everyone I'm 'into meditation' because I sat still once in 2019.",
-  "I check my phone for notifications, find none, then check again 30 seconds later. Just in case.",
-  "I've been wearing the same hoodie to work for 4 days. It's becoming part of my identity.",
-  "Per my last email, I am on the verge. Sincerely.",
-  "I replied 'no worries!' to an email that contained many worries. I am the worries now.",
-  "I've been on 'idle' on Slack for 6 months. Nobody has checked.",
-  "Had a meeting that could've been an email. The email could've been a thought.",
-  "I don't know what 'circle back' means. I've been nodding for years.",
-  "Told boss I'm 'heads down'. Was actually just staring at a wall.",
-  "Wrote 'per my last email' and immediately felt powerful. Then scared. Then hungry.",
-  "I am the group project now.",
-  "Inbox zero achieved. By closing the tab. Bold move. Consequences pending.",
-  "Every Sunday I plan to be a morning person. Every Monday I betray that person.",
-  "I have a recurring nightmare about missing a flight I never booked. I'm 34.",
-  "I rehearse phone calls out loud before making them. Even the ones to my mom.",
-  "I told my therapist I was 'fine' and she laughed. She actually laughed.",
-  "Achieved inner peace. Misplaced it 11 seconds later. Suspect the cat took it.",
-  "Wikipedia rabbit hole: 'list of pasta shapes'. It is 4 AM.",
-  "Time is a flat circle. So is my to-do list.",
-  "I am the calmest person in the room. The room is empty.",
-  "Was going to journal my feelings. Forgot what they were.",
-  "Manifesting a nap. The universe has not responded.",
-  "Currently spiraling. Will update. Or won't. Either way.",
-  "Did shadow work. Shadow won.",
-  "I am a runtime error in a trench coat pretending to be a person.",
-  "Tried to hug my stress goodbye. It hugged back. Now we own a dog together.",
-  "Asked the universe for a sign. It sent a low-battery notification.",
-  "I told my houseplant I'd water it tomorrow. It is now day 9 of 'tomorrow'. We don't make eye contact.",
-  "The dishes have been 'soaking' for 6 days. They are clean now. Spiritually.",
-  "My fridge contains: half a lime, regret, and three condiments I'm afraid to open.",
-  "I've been sleeping on the couch because the bed is too far.",
-  "Reorganized my entire apartment to avoid one email. Apartment looks great. Email unread.",
-  "Found a Tupperware in the back of the fridge. It pre-dates my lease.",
-  "Bought a planner. Used it once. It is now a coaster.",
-  "The laundry basket is now a chair. The chair is now a laundry basket.",
-  "I have 14 half-finished journals. Each one starts with 'this time will be different.'",
-  "Made the bed. Feels fake. Going to unmake it to feel real again.",
-  "Cooked a real meal. Ate it over the sink. The cycle continues.",
-  "The dishwasher is my enemy. We have an understanding.",
-  "Tried to fix a squeaky door. Now it doesn't close. We accept this.",
-  "My sock drawer is the dark forest. Things go in. They don't come out.",
-  "There's a pile of mail from 2023. It's a feature now.",
-  "I have 3,000 unread messages. I'm not even slightly curious.",
-  "Pretended to know who someone was. We've met 7 times.",
-  "I left a voice note. Heard it back. Deleted it. We will never speak of this.",
-  "Currently ignoring a text from someone I love very much. It's been 4 days.",
-  "I make plans I have no intention of attending. The plans know.",
-  "Told a friend 'let's catch up soon!' It's been 8 months. Soon is fluid.",
-  "I have a group chat I never open. It's been active since 2021. I respect its autonomy.",
-  "Wrote a long heartfelt message. Sent 'k' instead. The truth is 'k'.",
-  "I am the friend who says 'omg we should hang!' and then disappears.",
-  "Replied 'haha yeah' to a serious message. We are no longer friends.",
-  "Waved at someone who wasn't waving at me. Kept walking. They kept walking. We never spoke.",
-  "I have 47 contacts named 'Dave ??'. None of them are the right Dave.",
-  "Made eye contact with a stranger. We are now married in 3 alternate realities.",
-  "Said 'you too!' when the waiter said 'enjoy your meal'. As one does.",
-  "I will leave this party in 11 minutes. The countdown has begun.",
-  "It is 2:47 AM. I am googling 'do penguins have knees'. They do. I am at peace.",
-  "Currently ranking every pasta shape. Conchiglie is winning. Penne is a fraud.",
-  "I think about that one embarrassing thing I did in 2014 every night before bed.",
-  "Watched the wifi symbol spin for 4 minutes. Felt seen.",
-  "Currently in a Wikipedia rabbit hole about the fall of the Byzantine Empire. Send help.",
-  "Opened the fridge at 3 AM. Closed it. Opened it again. Nothing has changed.",
-  "I count ceiling tiles when I can't sleep. There are 64. There were 63 last night.",
-  "Tried to remember my password. Tried 7 variations. Gave up. New password is 'password1'.",
-  "I just remembered I have to do something tomorrow. I don't know what. But I have to.",
-  "Currently having a deep conversation with my cat. She has good takes.",
-  "Stared at my phone for 20 minutes. Did nothing. Felt productive.",
-  "I think I left the stove on. I didn't. But I think I did.",
-  "Currently replaying a conversation from 2019 in my head. Adding better comebacks.",
-  "Contemplating the universe. The universe is contemplating me back. We're tied.",
-  "I am the only person awake in this building. The building knows.",
-];
-
-/* ============================================================
-   HELPERS — deterministically pseudo-random per note id
-   ============================================================ */
-
-// Mulberry32 — small deterministic PRNG
-function rng(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-const COLORS: Color[] = ["yellow", "pink", "blue", "green", "orange", "purple"];
-const AUTHORS = [
-  "anon", "exposed", "doom-scroller", "corporate-me", "voicemail-phobic",
-  "5am liar", "hoodler", "zen fraud", "aiport ghost", "stationery goblin",
-  "midnight-me", "the friend who disappears", "k. just k.", "deep sigh", "tired™",
-  "ghost of group chat past", "passenger of life", "deadline dodger",
-];
-
-function buildWalls(): Wall[] {
-  // All 5 walls draw from the same shared pool of confessions — no themes.
-  // Each wall gets a different 15-confession slice, with wall-specific
-  // randomization (position, rotation, color, aging) so they look visually
-  // distinct without being categorized.
-  const NOTES_PER_WALL = 15;
-  const WALL_COUNT = 5;
-  const walls: Wall[] = [];
-  for (let wallIdx = 0; wallIdx < WALL_COUNT; wallIdx++) {
-    const rand = rng((wallIdx + 1) * 1337 + 7);
-    // Slice the pool — each wall gets the next 15 confessions, wrapping
-    // around if the pool is shorter than NOTES_PER_WALL × WALL_COUNT.
-    const start = (wallIdx * NOTES_PER_WALL) % ALL_CONFESSIONS.length;
-    const slice: string[] = [];
-    for (let i = 0; i < NOTES_PER_WALL; i++) {
-      slice.push(ALL_CONFESSIONS[(start + i) % ALL_CONFESSIONS.length]);
-    }
-    const notes: Note[] = slice.map((text, i) => {
-      const id = wallIdx * 100 + i + 1;
-      // Distribute notes on a loose 5-col x 3-row grid with strong jitter
-      // for a "scattered randomly" look rather than a perfect grid.
-      // NOTE: top starts at 28% so notes never overlap the header title
-      // (which occupies the top ~25% of the viewport).
-      const col = i % 5;
-      const row = Math.floor(i / 5);
-      const jitterX = (rand() - 0.5) * 12; // ±6%
-      const jitterY = (rand() - 0.5) * 8; // ±4%
-      const left = 3 + col * 18.5 + jitterX;
-      const top = 28 + row * 22 + jitterY;
-      const rot = (rand() - 0.5) * 18; // ±9°
-      // Weighted aging: 25% fresh, then ~19% each for the others — so
-      // most notes look aged/weathered, matching the "some torn, some old" brief.
-      const agingRoll = rand();
-      const aging: Aging =
-        agingRoll < 0.25 ? "fresh" :
-        agingRoll < 0.44 ? "faded" :
-        agingRoll < 0.63 ? "torn" :
-        agingRoll < 0.82 ? "crumpled" : "old";
-      return {
-        id,
-        text,
-        author: AUTHORS[Math.floor(rand() * AUTHORS.length)],
-        color: COLORS[Math.floor(rand() * COLORS.length)],
-        aging,
-        top,
-        left,
-        rot,
-        w: 150 + Math.floor(rand() * 60), // 150–210px
-      };
-    });
-    walls.push({ id: wallIdx + 1, notes });
-  }
-  return walls;
-}
 
 /* ============================================================
    BRICK WALL BACKGROUND — authentic weathered red brick
@@ -285,8 +116,6 @@ function agingStyle(aging: Aging): {
    COMPONENT
    ============================================================ */
 
-const WALLS = buildWalls();
-
 /* localStorage key for tracking which confession IDs are the current
  * user's (so the "★ yours" badge persists across refreshes). */
 const MINE_KEY = "osk.confessions.mine.v1";
@@ -352,12 +181,13 @@ function userConfessionToNote(c: UserConfession, isMine: boolean): Note {
 
 export default function ConfessionWall({
   wallIdx,
-  onWallIdxChange,
+  onNavigate,
   onNewConfession,
 }: {
-  /** Controlled wall index (lifted to parent so composer knows which wall) */
+  /** 0-indexed wall index, from the URL (#/wall/N → wallIdx N-1) */
   wallIdx: number;
-  onWallIdxChange: (next: number, direction: 1 | -1) => void;
+  /** Navigate to a different wall (changes the URL, which re-renders this component) */
+  onNavigate: (nextWallIdx: number) => void;
   /** Called when a new user confession is created (lifted to parent so
    *  the composer can trigger it). Receives the new confession. */
   onNewConfession: (cb: (c: UserConfession) => void) => void;
@@ -369,6 +199,8 @@ export default function ConfessionWall({
 
   // User confessions fetched from the backend (per wall)
   const [userNotes, setUserNotes] = useState<Note[]>([]);
+  // Loading state for the initial fetch
+  const [loading, setLoading] = useState(true);
   // Set of confession IDs (as strings) that the current user has posted
   const [mine, setMine] = useState<Set<string>>(() => loadMine());
   // The note currently in flight (composer → wall). When set, a FlyingNote
@@ -380,8 +212,6 @@ export default function ConfessionWall({
     targetX: number;
     targetY: number;
   } | null>(null);
-
-  const wall = WALLS[wallIdx];
 
   /* Register the new-confession handler with the parent so the composer
    * can call it. Orchestrates the flying-note animation:
@@ -398,7 +228,13 @@ export default function ConfessionWall({
       setMine(newMine);
       saveMine(newMine);
 
-      if (c.wallIdx !== wallIdx) return; // shouldn't happen, but guard
+      // If the confession landed on a different wall (auto-spawned because
+      // this wall was full), navigate there — the note will appear after
+      // the fetch on the new wall.
+      if (c.wallIdx !== wallIdx) {
+        onNavigate(c.wallIdx);
+        return;
+      }
 
       const futureNote = userConfessionToNote(c, true);
       const prefersReduced = window.matchMedia(
@@ -512,12 +348,14 @@ export default function ConfessionWall({
   /* Fetch user confessions whenever wallIdx changes */
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     listConfessions(wallIdx).then((list) => {
       if (cancelled) return;
       const notes = list.map((c) =>
         userConfessionToNote(c, mine.has(String(c.id)))
       );
       setUserNotes(notes);
+      setLoading(false);
     });
     return () => {
       cancelled = true;
@@ -594,12 +432,13 @@ export default function ConfessionWall({
 
   const goNext = () => {
     setDirection(1);
-    onWallIdxChange((wallIdx + 1) % WALLS.length, 1);
+    onNavigate(wallIdx + 1);
     setDragHint(false);
   };
   const goPrev = () => {
+    if (wallIdx <= 0) return; // can't go before wall 0
     setDirection(-1);
-    onWallIdxChange((wallIdx - 1 + WALLS.length) % WALLS.length, -1);
+    onNavigate(wallIdx - 1);
     setDragHint(false);
   };
 
@@ -641,7 +480,7 @@ export default function ConfessionWall({
         <div className="mx-auto max-w-3xl">
           <div className="flex items-center justify-center gap-3">
             <span className="inline-block rotate-[-2deg] rounded-full border-2 border-cream bg-pink px-3 py-1 font-display text-[10px] font-extrabold uppercase tracking-widest text-cream shadow-[3px_3px_0_#0b0c10] sm:text-xs">
-              📌 wall {wallIdx + 1} / {WALLS.length}
+              📌 wall {wallIdx + 1}
             </span>
             <span className="font-hand text-base font-bold text-toxic drop-shadow-[2px_2px_0_rgba(11,12,16,0.6)] sm:text-xl">
               swipe right →
@@ -673,8 +512,48 @@ export default function ConfessionWall({
             transition={{ type: "spring", stiffness: 280, damping: 28 }}
             className="relative h-full w-full"
           >
-            {/* 15 seed sticky notes + any user confessions for this wall */}
-            {[...userNotes, ...wall.notes].map((n) => {
+            {/* Loading state */}
+            {loading && (
+              <div className="flex h-full items-center justify-center">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                  className="text-6xl"
+                >
+                  ⏳
+                </motion.div>
+              </div>
+            )}
+
+            {/* Empty state — no confessions on this wall yet */}
+            {!loading && userNotes.length === 0 && (
+              <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+                <motion.div
+                  animate={{ y: [0, -10, 0], rotate: [-3, 3, -3] }}
+                  transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                  className="mb-6 text-8xl"
+                >
+                  🗒️
+                </motion.div>
+                <h3 className="font-display text-2xl font-extrabold uppercase leading-[0.9] tracking-tight text-cream drop-shadow-[2px_2px_0_rgba(11,12,16,0.6)] sm:text-4xl">
+                  This wall is fresh.
+                </h3>
+                <p className="mt-4 max-w-md font-hand text-xl font-bold text-cream/80 drop-shadow-[1px_1px_0_rgba(11,12,16,0.7)]">
+                  be the first to pin something here. the bricks are listening.
+                </p>
+                <a
+                  href="#composer"
+                  data-hover="WRITE!"
+                  className="mt-8 inline-flex items-center gap-2 rounded-xl border-2 border-jet bg-toxic px-7 py-4 font-display text-base font-bold uppercase tracking-tight text-jet shadow-[6px_6px_0_#0b0c10] transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-[8px_8px_0_#0b0c10] sm:text-lg"
+                >
+                  <span className="animate-wiggle">✍️</span>
+                  Write the first confession →
+                </a>
+              </div>
+            )}
+
+            {/* User confession sticky notes */}
+            {!loading && userNotes.length > 0 && userNotes.map((n) => {
               const col = COLOR_MAP[n.color];
               const ag = agingStyle(n.aging);
               const style: CSSProperties = {
@@ -794,36 +673,23 @@ export default function ConfessionWall({
         )}
       </AnimatePresence>
 
-      {/* Bottom-right nav: prev / next + counter */}
+      {/* Bottom-center nav: prev / next + wall counter */}
       <div className="cw-reveal absolute bottom-6 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3">
         <button
           onClick={goPrev}
+          disabled={wallIdx <= 0}
           data-hover="PREV"
           aria-label="Previous wall"
-          className="grid h-11 w-11 place-items-center rounded-xl border-2 border-cream bg-jet text-cream shadow-[3px_3px_0_#fcf7f8] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#fcf7f8] active:translate-y-0"
+          className="grid h-11 w-11 place-items-center rounded-xl border-2 border-cream bg-jet text-cream shadow-[3px_3px_0_#fcf7f8] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#fcf7f8] active:translate-y-0 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[3px_3px_0_#fcf7f8]"
         >
           ←
         </button>
 
-        {/* Dots */}
-        <div className="flex items-center gap-1.5">
-          {WALLS.map((w, i) => (
-            <button
-              key={w.id}
-              onClick={() => {
-                setDirection(i > wallIdx ? 1 : -1);
-                onWallIdxChange(i, i > wallIdx ? 1 : -1);
-                setDragHint(false);
-              }}
-              aria-label={`Go to wall ${i + 1}`}
-              data-hover={`WALL ${i + 1}`}
-              className="h-2.5 w-2.5 rounded-full border-2 border-cream transition-all duration-200"
-              style={{
-                backgroundColor: i === wallIdx ? "var(--color-toxic)" : "transparent",
-                transform: i === wallIdx ? "scale(1.4)" : "scale(1)",
-              }}
-            />
-          ))}
+        {/* Wall counter — shows current wall number */}
+        <div className="flex items-center gap-1.5 rounded-full border-2 border-cream bg-jet px-4 py-2 font-display text-xs font-extrabold uppercase tracking-widest text-cream shadow-[3px_3px_0_#fcf7f8]">
+          <span className="text-toxic">{wallIdx + 1}</span>
+          <span className="opacity-50">/</span>
+          <span className="opacity-70">∞</span>
         </div>
 
         <button

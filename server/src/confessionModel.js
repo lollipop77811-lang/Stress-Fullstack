@@ -1,12 +1,14 @@
 // Mongoose schema for a single confession pinned to a Wall of Confession.
 // One document = one sticky note on one wall.
+//
+// Walls are INFINITE — there's no fixed wall count. When a wall hits
+// WALL_CAP confessions, the next confession auto-spawns wall N+1.
 
 import mongoose from "mongoose";
 
 const ALLOWED_COLORS = ["yellow", "pink", "blue", "green", "orange", "purple"];
 const ALLOWED_AGINGS = ["fresh", "faded", "torn", "crumpled", "old"];
-const WALL_COUNT = 5; // walls 0..4
-const WALL_CAP = 20; // max user confessions per wall before oldest is archived
+const WALL_CAP = 20; // max confessions per wall before next wall is spawned
 
 const confessionSchema = new mongoose.Schema(
   {
@@ -40,10 +42,9 @@ const confessionSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 0,
-      max: WALL_COUNT - 1,
       validate: {
         validator: Number.isInteger,
-        message: "wallIdx must be an integer 0..4",
+        message: "wallIdx must be a non-negative integer",
       },
     },
     isArchived: {
@@ -51,26 +52,22 @@ const confessionSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
-    // Optional: ipHash for future rate-limit dedup (not populated yet —
-    // express-rate-limit handles limiting in-memory)
     ipHash: { type: String, default: null, select: false },
   },
-  { timestamps: true } // adds createdAt + updatedAt automatically
+  { timestamps: true }
 );
 
-// Index for the most common query: list non-archived confessions on a wall
-// ordered newest-first.
+// Index for the most common query: list confessions on a wall newest-first
 confessionSchema.index({ wallIdx: 1, isArchived: 1, createdAt: -1 });
 
-// Static helpers — keep model logic in one place
+// Static helpers
 confessionSchema.statics = {
   ALLOWED_COLORS,
   ALLOWED_AGINGS,
-  WALL_COUNT,
   WALL_CAP,
 };
 
 const Confession = mongoose.model("Confession", confessionSchema);
 
 export default Confession;
-export { ALLOWED_COLORS, ALLOWED_AGINGS, WALL_COUNT, WALL_CAP };
+export { ALLOWED_COLORS, ALLOWED_AGINGS, WALL_CAP };

@@ -1,4 +1,7 @@
-// Routes for /api/confessions, /api/walls/:wallIdx/confessions, /api/mine
+// Routes for /api/confessions, /api/walls/stats, /api/walls/:wallIdx/confessions, /api/mine
+//
+// Walls are INFINITE — no fixed wall count. When a wall hits WALL_CAP
+// confessions, the next confession auto-spawns wall N+1.
 
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
@@ -6,13 +9,12 @@ import mongoose from "mongoose";
 import Confession, {
   ALLOWED_COLORS,
   ALLOWED_AGINGS,
-  WALL_COUNT,
   WALL_CAP,
 } from "./confessionModel.js";
 
 const router = Router();
 
-// 1 confession per 30s per IP — keeps the spam at bay without annoying real users
+// 1 confession per 30s per IP
 const postLimiter = rateLimit({
   windowMs: 30 * 1000,
   max: 1,
@@ -24,14 +26,39 @@ const postLimiter = rateLimit({
 });
 
 /**
+ * GET /api/walls/stats
+ * Returns summary stats about all walls.
+ *   totalWalls: highest wallIdx + 1 (min 1 — wall 0 always "exists" even if empty)
+ *   totalConfessions: count of all non-archived confessions
+ *   wallCap: max confessions per wall
+ */
+router.get("/walls/stats", async (_req, res) => {
+  try {
+    const totalConfessions = await Confession.countDocuments({
+      isArchived: false,
+    });
+    const maxWall = await Confession.findOne({})
+      .sort({ wallIdx: -1 })
+      .select("wallIdx")
+      .lean()
+      .exec();
+    const totalWalls = maxWall ? maxWall.wallIdx + 1 : 1;
+
+    return res.json({
+      totalWalls,
+      totalConfessions,
+      wallCap: WALL_CAP,
+    });
+  } catch (err) {
+    console.error("[stats] error:", err);
+    return res.status(500).json({ error: "failed to fetch wall stats" });
+  }
+});
+
+/**
  * GET /api/mine?ids=id1,id2,id3
  * Returns the full confession documents for the given IDs (regardless of
- * wallIdx or archived state — so the user can see their own history even
- * after it gets archived off a wall).
- *
- * Used by the "★ My Confessions" page on the frontend. The IDs come from
- * the user's localStorage (osk.confessions.mine.v1) — the server doesn't
- * track who owns what, only the client does.
+ * wallIdx or archived state).
  */
 router.get("/mine", async (req, res) => {
   const rawIds = String(req.query.ids || "");
@@ -44,8 +71,6 @@ router.get("/mine", async (req, res) => {
     return res.json({ count: 0, confessions: [] });
   }
 
-  // Validate that all IDs are valid ObjectId strings — Mongoose throws on
-  // invalid ones, so filter them out rather than 500-ing the whole request.
   const validIds = ids.filter((id) => mongoose.isValidObjectId(id));
   if (validIds.length === 0) {
     return res.status(400).json({ error: "no valid ids provided" });
@@ -80,13 +105,15 @@ router.get("/mine", async (req, res) => {
 
 /**
  * GET /api/walls/:wallIdx/confessions
- * Returns all non-archived user confessions for the given wall, newest first.
+ * Returns all non-archived confessions for the given wall, newest first.
+ * wallIdx can be any non-negative integer (walls are infinite).
+ * If the wall doesn't exist yet (no confessions), returns an empty array.
  */
 router.get("/walls/:wallIdx/confessions", async (req, res) => {
   const wallIdx = Number(req.params.wallIdx);
-  if (!Number.isInteger(wallIdx) || wallIdx < 0 || wallIdx >= WALL_COUNT) {
+  if (!Number.isInteger(wallIdx) || wallIdx < 0) {
     return res.status(400).json({
-      error: `wallIdx must be an integer 0..${WALL_COUNT - 1}`,
+      error: "wallIdx must be a non-negative integer",
     });
   }
 
@@ -103,6 +130,7 @@ router.get("/walls/:wallIdx/confessions", async (req, res) => {
       wallIdx,
       count: confessions.length,
       cap: WALL_CAP,
+      isFull: confessions.length >= WALL_CAP,
       confessions: confessions.map((c) => ({
         id: c._id.toString(),
         text: c.text,
@@ -122,8 +150,14 @@ router.get("/walls/:wallIdx/confessions", async (req, res) => {
 /**
  * POST /api/confessions
  * Body: { text, author?, color, aging, wallIdx }
- * Creates a new confession. If wall has >= WALL_CAP non-archived user
- * confessions after this insert, the oldest gets archived.
+ *
+ * Creates a new confession on the requested wall. If that wall is already
+ * full (>= WALL_CAP active confessions), the confession is auto-spawned
+ * onto the next wall (wallIdx + 1). This continues until a non-full wall
+ * is found, enabling infinite wall growth.
+ *
+ * Response includes the ACTUAL wallIdx where the confession landed (which
+ * may differ from the requested wallIdx if the original was full).
  */
 router.post("/confessions", postLimiter, async (req, res) => {
   const { text, author, color, aging, wallIdx } = req.body ?? {};
@@ -135,11 +169,11 @@ router.post("/confessions", postLimiter, async (req, res) => {
   if (text.length > 200) {
     return res.status(400).json({ error: "text must be at most 200 characters" });
   }
-  const wIdx = Number(wallIdx);
-  if (!Number.isInteger(wIdx) || wIdx < 0 || wIdx >= WALL_COUNT) {
+  const requestedWallIdx = Number(wallIdx);
+  if (!Number.isInteger(requestedWallIdx) || requestedWallIdx < 0) {
     return res
       .status(400)
-      .json({ error: `wallIdx must be an integer 0..${WALL_COUNT - 1}` });
+      .json({ error: "wallIdx must be a non-negative integer" });
   }
   if (!ALLOWED_COLORS.includes(color)) {
     return res
@@ -157,40 +191,32 @@ router.post("/confessions", postLimiter, async (req, res) => {
       : "anon";
 
   try {
-    // Create the new confession
+    // Find the actual wall to post on: starting from the requested wallIdx,
+    // find the first wall that isn't full. This enables auto-spawning.
+    let actualWallIdx = requestedWallIdx;
+    const maxWallToCheck = requestedWallIdx + 100; // safety limit
+    while (actualWallIdx < maxWallToCheck) {
+      const count = await Confession.countDocuments({
+        wallIdx: actualWallIdx,
+        isArchived: false,
+      });
+      if (count < WALL_CAP) break;
+      actualWallIdx++;
+    }
+
     const created = await Confession.create({
       text: text.trim(),
       author: safeAuthor,
       color,
       aging,
-      wallIdx: wIdx,
+      wallIdx: actualWallIdx,
       isArchived: false,
     });
 
-    // Check if wall now exceeds cap — if so, archive the OLDEST user note
-    // (not the one we just created)
-    const userCount = await Confession.countDocuments({
-      wallIdx: wIdx,
+    const wallCount = await Confession.countDocuments({
+      wallIdx: actualWallIdx,
       isArchived: false,
     });
-
-    let archived = null;
-    if (userCount > WALL_CAP) {
-      // Find oldest non-archived on this wall that isn't the just-created one
-      const oldest = await Confession.findOne({
-        wallIdx: wIdx,
-        isArchived: false,
-        _id: { $ne: created._id },
-      })
-        .sort({ createdAt: 1 })
-        .exec();
-
-      if (oldest) {
-        oldest.isArchived = true;
-        await oldest.save();
-        archived = { id: oldest._id.toString() };
-      }
-    }
 
     return res.status(201).json({
       confession: {
@@ -202,9 +228,11 @@ router.post("/confessions", postLimiter, async (req, res) => {
         wallIdx: created.wallIdx,
         createdAt: created.createdAt,
       },
-      archivedOldest: archived,
-      wallCount: userCount,
+      requestedWallIdx,
+      actualWallIdx,
+      wallCount,
       wallCap: WALL_CAP,
+      spawnedNewWall: actualWallIdx !== requestedWallIdx,
     });
   } catch (err) {
     console.error("[confessions] create error:", err);
