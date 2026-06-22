@@ -447,13 +447,20 @@ export default function ConfessionWall({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, wallIdx]);
 
+  // Can we navigate forward? Walls grow as confessions arrive, but users
+  // can't navigate into walls that don't exist yet. The Next button, swipe,
+  // and → keyboard shortcut all check this.
+  const canGoNext = wallIdx + 1 < totalWalls;
+  const canGoPrev = wallIdx > 0;
+
   const goNext = () => {
+    if (!canGoNext) return; // no wall ahead — don't navigate into the void
     setDirection(1);
     onNavigate(wallIdx + 1);
     setDragHint(false);
   };
   const goPrev = () => {
-    if (wallIdx <= 0) return; // can't go before wall 0
+    if (!canGoPrev) return; // can't go before wall 0
     setDirection(-1);
     onNavigate(wallIdx - 1);
     setDragHint(false);
@@ -694,7 +701,7 @@ export default function ConfessionWall({
       <div className="cw-reveal absolute bottom-6 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3">
         <button
           onClick={goPrev}
-          disabled={wallIdx <= 0}
+          disabled={!canGoPrev}
           data-hover="PREV"
           aria-label="Previous wall"
           className="grid h-11 w-11 place-items-center rounded-xl border-2 border-cream bg-jet text-cream shadow-[3px_3px_0_#fcf7f8] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#fcf7f8] active:translate-y-0 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[3px_3px_0_#fcf7f8]"
@@ -711,9 +718,10 @@ export default function ConfessionWall({
 
         <button
           onClick={goNext}
+          disabled={!canGoNext}
           data-hover="NEXT"
           aria-label="Next wall"
-          className="grid h-11 w-11 place-items-center rounded-xl border-2 border-cream bg-jet text-cream shadow-[3px_3px_0_#fcf7f8] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#fcf7f8] active:translate-y-0"
+          className="grid h-11 w-11 place-items-center rounded-xl border-2 border-cream bg-jet text-cream shadow-[3px_3px_0_#fcf7f8] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#fcf7f8] active:translate-y-0 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[3px_3px_0_#fcf7f8]"
         >
           →
         </button>
