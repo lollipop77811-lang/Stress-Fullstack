@@ -35,8 +35,6 @@ type Note = {
 
 type Wall = {
   id: number;
-  theme: string;
-  subtitle: string;
   notes: Note[];
 };
 
@@ -57,115 +55,88 @@ const COLOR_MAP: Record<
 };
 
 /* ============================================================
-   75 CONFESSIONS — 5 walls × 15 notes, themed per wall
+   75 CONFESSIONS — one shared pool, distributed evenly across
+   all 5 walls (15 per wall). Walls are NOT categorized — every
+   wall is identical in theme, just shows a different 15-confession
+   slice of the same pool.
    ============================================================ */
 
-const WALL_THEMES = [
-  {
-    theme: "Workplace Confessions",
-    subtitle: "offices are just sad adult playgrounds",
-    confessions: [
-      "I've been pretending to understand my job for 3 years. Nobody has noticed. The fear is constant.",
-      "Reply 'sounds good!' to emails that absolutely do not sound good.",
-      "My manager: 'Just a quick call.' It has been 2 hours.",
-      "I told everyone I'm 'into meditation' because I sat still once in 2019.",
-      "I check my phone for notifications, find none, then check again 30 seconds later. Just in case.",
-      "I've been wearing the same hoodie to work for 4 days. It's becoming part of my identity.",
-      "Per my last email, I am on the verge. Sincerely.",
-      "I replied 'no worries!' to an email that contained many worries. I am the worries now.",
-      "I've been on 'idle' on Slack for 6 months. Nobody has checked.",
-      "Had a meeting that could've been an email. The email could've been a thought.",
-      "I don't know what 'circle back' means. I've been nodding for years.",
-      "Told boss I'm 'heads down'. Was actually just staring at a wall.",
-      "Wrote 'per my last email' and immediately felt powerful. Then scared. Then hungry.",
-      "I am the group project now.",
-      "Inbox zero achieved. By closing the tab. Bold move. Consequences pending.",
-    ],
-  },
-  {
-    theme: "Existential Confessions",
-    subtitle: "we're all just vibes in trench coats",
-    confessions: [
-      "Every Sunday I plan to be a morning person. Every Monday I betray that person.",
-      "I have a recurring nightmare about missing a flight I never booked. I'm 34.",
-      "I rehearse phone calls out loud before making them. Even the ones to my mom.",
-      "I told my therapist I was 'fine' and she laughed. She actually laughed.",
-      "Achieved inner peace. Misplaced it 11 seconds later. Suspect the cat took it.",
-      "Wikipedia rabbit hole: 'list of pasta shapes'. It is 4 AM.",
-      "Time is a flat circle. So is my to-do list.",
-      "I am the calmest person in the room. The room is empty.",
-      "Was going to journal my feelings. Forgot what they were.",
-      "Manifesting a nap. The universe has not responded.",
-      "Currently spiraling. Will update. Or won't. Either way.",
-      "Did shadow work. Shadow won.",
-      "I am a runtime error in a trench coat pretending to be a person.",
-      "Tried to hug my stress goodbye. It hugged back. Now we own a dog together.",
-      "Asked the universe for a sign. It sent a low-battery notification.",
-    ],
-  },
-  {
-    theme: "Domestic Confessions",
-    subtitle: "the kitchen is judging you",
-    confessions: [
-      "I told my houseplant I'd water it tomorrow. It is now day 9 of 'tomorrow'. We don't make eye contact.",
-      "The dishes have been 'soaking' for 6 days. They are clean now. Spiritually.",
-      "My fridge contains: half a lime, regret, and three condiments I'm afraid to open.",
-      "I've been sleeping on the couch because the bed is too far.",
-      "Reorganized my entire apartment to avoid one email. Apartment looks great. Email unread.",
-      "Found a Tupperware in the back of the fridge. It pre-dates my lease.",
-      "Bought a planner. Used it once. It is now a coaster.",
-      "The laundry basket is now a chair. The chair is now a laundry basket.",
-      "I have 14 half-finished journals. Each one starts with 'this time will be different.'",
-      "Made the bed. Feels fake. Going to unmake it to feel real again.",
-      "Cooked a real meal. Ate it over the sink. The cycle continues.",
-      "The dishwasher is my enemy. We have an understanding.",
-      "Tried to fix a squeaky door. Now it doesn't close. We accept this.",
-      "My sock drawer is the dark forest. Things go in. They don't come out.",
-      "There's a pile of mail from 2023. It's a feature now.",
-    ],
-  },
-  {
-    theme: "Social Confessions",
-    subtitle: "we're all just ghosts with group chats",
-    confessions: [
-      "I have 3,000 unread messages. I'm not even slightly curious.",
-      "Pretended to know who someone was. We've met 7 times.",
-      "I left a voice note. Heard it back. Deleted it. We will never speak of this.",
-      "Currently ignoring a text from someone I love very much. It's been 4 days.",
-      "I make plans I have no intention of attending. The plans know.",
-      "Told a friend 'let's catch up soon!' It's been 8 months. Soon is fluid.",
-      "I have a group chat I never open. It's been active since 2021. I respect its autonomy.",
-      "Wrote a long heartfelt message. Sent 'k' instead. The truth is 'k'.",
-      "I am the friend who says 'omg we should hang!' and then disappears.",
-      "Replied 'haha yeah' to a serious message. We are no longer friends.",
-      "Waved at someone who wasn't waving at me. Kept walking. They kept walking. We never spoke.",
-      "I have 47 contacts named 'Dave ??'. None of them are the right Dave.",
-      "Made eye contact with a stranger. We are now married in 3 alternate realities.",
-      "Said 'you too!' when the waiter said 'enjoy your meal'. As one does.",
-      "I will leave this party in 11 minutes. The countdown has begun.",
-    ],
-  },
-  {
-    theme: "Midnight Confessions",
-    subtitle: "the thoughts come at 2:47 AM",
-    confessions: [
-      "It is 2:47 AM. I am googling 'do penguins have knees'. They do. I am at peace.",
-      "Currently ranking every pasta shape. Conchiglie is winning. Penne is a fraud.",
-      "I think about that one embarrassing thing I did in 2014 every night before bed.",
-      "Watched the wifi symbol spin for 4 minutes. Felt seen.",
-      "Currently in a Wikipedia rabbit hole about the fall of the Byzantine Empire. Send help.",
-      "Opened the fridge at 3 AM. Closed it. Opened it again. Nothing has changed.",
-      "I count ceiling tiles when I can't sleep. There are 64. There were 63 last night.",
-      "Tried to remember my password. Tried 7 variations. Gave up. New password is 'password1'.",
-      "I just remembered I have to do something tomorrow. I don't know what. But I have to.",
-      "Currently having a deep conversation with my cat. She has good takes.",
-      "Stared at my phone for 20 minutes. Did nothing. Felt productive.",
-      "I think I left the stove on. I didn't. But I think I did.",
-      "Currently replaying a conversation from 2019 in my head. Adding better comebacks.",
-      "Contemplating the universe. The universe is contemplating me back. We're tied.",
-      "I am the only person awake in this building. The building knows.",
-    ],
-  },
+const ALL_CONFESSIONS: string[] = [
+  "I've been pretending to understand my job for 3 years. Nobody has noticed. The fear is constant.",
+  "Reply 'sounds good!' to emails that absolutely do not sound good.",
+  "My manager: 'Just a quick call.' It has been 2 hours.",
+  "I told everyone I'm 'into meditation' because I sat still once in 2019.",
+  "I check my phone for notifications, find none, then check again 30 seconds later. Just in case.",
+  "I've been wearing the same hoodie to work for 4 days. It's becoming part of my identity.",
+  "Per my last email, I am on the verge. Sincerely.",
+  "I replied 'no worries!' to an email that contained many worries. I am the worries now.",
+  "I've been on 'idle' on Slack for 6 months. Nobody has checked.",
+  "Had a meeting that could've been an email. The email could've been a thought.",
+  "I don't know what 'circle back' means. I've been nodding for years.",
+  "Told boss I'm 'heads down'. Was actually just staring at a wall.",
+  "Wrote 'per my last email' and immediately felt powerful. Then scared. Then hungry.",
+  "I am the group project now.",
+  "Inbox zero achieved. By closing the tab. Bold move. Consequences pending.",
+  "Every Sunday I plan to be a morning person. Every Monday I betray that person.",
+  "I have a recurring nightmare about missing a flight I never booked. I'm 34.",
+  "I rehearse phone calls out loud before making them. Even the ones to my mom.",
+  "I told my therapist I was 'fine' and she laughed. She actually laughed.",
+  "Achieved inner peace. Misplaced it 11 seconds later. Suspect the cat took it.",
+  "Wikipedia rabbit hole: 'list of pasta shapes'. It is 4 AM.",
+  "Time is a flat circle. So is my to-do list.",
+  "I am the calmest person in the room. The room is empty.",
+  "Was going to journal my feelings. Forgot what they were.",
+  "Manifesting a nap. The universe has not responded.",
+  "Currently spiraling. Will update. Or won't. Either way.",
+  "Did shadow work. Shadow won.",
+  "I am a runtime error in a trench coat pretending to be a person.",
+  "Tried to hug my stress goodbye. It hugged back. Now we own a dog together.",
+  "Asked the universe for a sign. It sent a low-battery notification.",
+  "I told my houseplant I'd water it tomorrow. It is now day 9 of 'tomorrow'. We don't make eye contact.",
+  "The dishes have been 'soaking' for 6 days. They are clean now. Spiritually.",
+  "My fridge contains: half a lime, regret, and three condiments I'm afraid to open.",
+  "I've been sleeping on the couch because the bed is too far.",
+  "Reorganized my entire apartment to avoid one email. Apartment looks great. Email unread.",
+  "Found a Tupperware in the back of the fridge. It pre-dates my lease.",
+  "Bought a planner. Used it once. It is now a coaster.",
+  "The laundry basket is now a chair. The chair is now a laundry basket.",
+  "I have 14 half-finished journals. Each one starts with 'this time will be different.'",
+  "Made the bed. Feels fake. Going to unmake it to feel real again.",
+  "Cooked a real meal. Ate it over the sink. The cycle continues.",
+  "The dishwasher is my enemy. We have an understanding.",
+  "Tried to fix a squeaky door. Now it doesn't close. We accept this.",
+  "My sock drawer is the dark forest. Things go in. They don't come out.",
+  "There's a pile of mail from 2023. It's a feature now.",
+  "I have 3,000 unread messages. I'm not even slightly curious.",
+  "Pretended to know who someone was. We've met 7 times.",
+  "I left a voice note. Heard it back. Deleted it. We will never speak of this.",
+  "Currently ignoring a text from someone I love very much. It's been 4 days.",
+  "I make plans I have no intention of attending. The plans know.",
+  "Told a friend 'let's catch up soon!' It's been 8 months. Soon is fluid.",
+  "I have a group chat I never open. It's been active since 2021. I respect its autonomy.",
+  "Wrote a long heartfelt message. Sent 'k' instead. The truth is 'k'.",
+  "I am the friend who says 'omg we should hang!' and then disappears.",
+  "Replied 'haha yeah' to a serious message. We are no longer friends.",
+  "Waved at someone who wasn't waving at me. Kept walking. They kept walking. We never spoke.",
+  "I have 47 contacts named 'Dave ??'. None of them are the right Dave.",
+  "Made eye contact with a stranger. We are now married in 3 alternate realities.",
+  "Said 'you too!' when the waiter said 'enjoy your meal'. As one does.",
+  "I will leave this party in 11 minutes. The countdown has begun.",
+  "It is 2:47 AM. I am googling 'do penguins have knees'. They do. I am at peace.",
+  "Currently ranking every pasta shape. Conchiglie is winning. Penne is a fraud.",
+  "I think about that one embarrassing thing I did in 2014 every night before bed.",
+  "Watched the wifi symbol spin for 4 minutes. Felt seen.",
+  "Currently in a Wikipedia rabbit hole about the fall of the Byzantine Empire. Send help.",
+  "Opened the fridge at 3 AM. Closed it. Opened it again. Nothing has changed.",
+  "I count ceiling tiles when I can't sleep. There are 64. There were 63 last night.",
+  "Tried to remember my password. Tried 7 variations. Gave up. New password is 'password1'.",
+  "I just remembered I have to do something tomorrow. I don't know what. But I have to.",
+  "Currently having a deep conversation with my cat. She has good takes.",
+  "Stared at my phone for 20 minutes. Did nothing. Felt productive.",
+  "I think I left the stove on. I didn't. But I think I did.",
+  "Currently replaying a conversation from 2019 in my head. Adding better comebacks.",
+  "Contemplating the universe. The universe is contemplating me back. We're tied.",
+  "I am the only person awake in this building. The building knows.",
 ];
 
 /* ============================================================
@@ -193,9 +164,23 @@ const AUTHORS = [
 ];
 
 function buildWalls(): Wall[] {
-  return WALL_THEMES.map((t, wallIdx) => {
+  // All 5 walls draw from the same shared pool of confessions — no themes.
+  // Each wall gets a different 15-confession slice, with wall-specific
+  // randomization (position, rotation, color, aging) so they look visually
+  // distinct without being categorized.
+  const NOTES_PER_WALL = 15;
+  const WALL_COUNT = 5;
+  const walls: Wall[] = [];
+  for (let wallIdx = 0; wallIdx < WALL_COUNT; wallIdx++) {
     const rand = rng((wallIdx + 1) * 1337 + 7);
-    const notes: Note[] = t.confessions.map((text, i) => {
+    // Slice the pool — each wall gets the next 15 confessions, wrapping
+    // around if the pool is shorter than NOTES_PER_WALL × WALL_COUNT.
+    const start = (wallIdx * NOTES_PER_WALL) % ALL_CONFESSIONS.length;
+    const slice: string[] = [];
+    for (let i = 0; i < NOTES_PER_WALL; i++) {
+      slice.push(ALL_CONFESSIONS[(start + i) % ALL_CONFESSIONS.length]);
+    }
+    const notes: Note[] = slice.map((text, i) => {
       const id = wallIdx * 100 + i + 1;
       // Distribute notes on a loose 5-col x 3-row grid with strong jitter
       // for a "scattered randomly" look rather than a perfect grid.
@@ -228,13 +213,9 @@ function buildWalls(): Wall[] {
         w: 150 + Math.floor(rand() * 60), // 150–210px
       };
     });
-    return {
-      id: wallIdx + 1,
-      theme: t.theme,
-      subtitle: t.subtitle,
-      notes,
-    };
-  });
+    walls.push({ id: wallIdx + 1, notes });
+  }
+  return walls;
 }
 
 /* ============================================================
@@ -835,7 +816,7 @@ export default function ConfessionWall({
                 setDragHint(false);
               }}
               aria-label={`Go to wall ${i + 1}`}
-              data-hover={w.theme.split(" ")[0].toUpperCase()}
+              data-hover={`WALL ${i + 1}`}
               className="h-2.5 w-2.5 rounded-full border-2 border-cream transition-all duration-200"
               style={{
                 backgroundColor: i === wallIdx ? "var(--color-toxic)" : "transparent",

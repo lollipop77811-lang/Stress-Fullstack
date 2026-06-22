@@ -42,14 +42,6 @@ const COLOR_MAP: Record<Color, { bg: string; edge: string; tape: string; text: s
   purple: { bg: "#ddd0f0", edge: "#b3a3d8", tape: "rgba(255,255,255,0.55)", text: "#1b1c22" },
 };
 
-const WALL_NAMES = [
-  "Workplace",
-  "Existential",
-  "Domestic",
-  "Social",
-  "Midnight",
-];
-
 const MINE_KEY = "osk.confessions.mine.v1";
 
 function loadMine(): string[] {
@@ -443,7 +435,7 @@ export default function MyConfessions() {
                           — {n.author}
                         </span>
                         <span className="ml-1 shrink-0 text-[9px] font-bold uppercase opacity-50">
-                          {WALL_NAMES[n.wallIdx] ?? `wall ${n.wallIdx + 1}`}
+                          {`wall ${n.wallIdx + 1}`}
                         </span>
                       </div>
 
@@ -531,7 +523,7 @@ export default function MyConfessions() {
               <div className="mb-3 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-widest opacity-60">
                 <span>confession #{open.id.slice(-6)}</span>
                 <span>·</span>
-                <span>{WALL_NAMES[open.wallIdx] ?? `wall ${open.wallIdx + 1}`}</span>
+                <span>{`wall ${open.wallIdx + 1}`}</span>
                 {open.isArchived && (
                   <>
                     <span>·</span>
