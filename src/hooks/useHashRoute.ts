@@ -4,36 +4,46 @@ import { useEffect, useState } from "react";
  * Routes:
  *   "" / "#top" / "#bento" / ... → "home"    (anchor-based in-page nav)
  *   "#/whisper"                  → "whisper" (anonymous ephemeral confessions)
- *   "#/wall"                     → "wall"    (wall page, default to newest wall)
- *   "#/wall/5"                   → "wall"    (wall page, wallIdx = 4 — 1-indexed URL)
+ *   "#/wall"                     → "wall"    (wall page, default to newest = displayN 1)
+ *   "#/wall/3"                   → "wall"    (wall page, displayN = 3)
  *   "#/mine"                     → "mine"    (user's own confessions)
  *
- * Wall URLs are 1-indexed: #/wall/1 = wallIdx 0, #/wall/5 = wallIdx 4.
- * Internal wallIdx is always 0-indexed (matches the backend).
+ * Wall numbering is REVERSE-CHRONOLOGICAL:
+ *   displayN = 1  → newest wall (where new confessions go)
+ *   displayN = 2  → next newest
+ *   displayN = N  → oldest wall
+ *
+ * When wall 1 fills up, it becomes wall 2, and a fresh wall 1 spawns.
+ *
+ * Internal wallIdx (used by the backend) is 0-indexed oldest-first:
+ *   internal wallIdx = totalWalls - displayN
+ *
+ * The route hook returns displayN. The parent (App.tsx) fetches totalWalls
+ * from the API and computes the internal wallIdx.
  */
 export type Route = "home" | "whisper" | "wall" | "mine";
 
 export type RouteState = {
   route: Route;
-  /** Only for "wall" route. null = no wall specified (default to newest).
-   *  0-indexed internal wall index. */
-  wallIdx: number | null;
+  /** Only for "wall" route. 1-indexed DISPLAY number (1 = newest).
+   *  null = no wall specified (default to 1 = newest). */
+  wallDisplayN: number | null;
 };
 
 function parse(): RouteState {
-  if (typeof window === "undefined") return { route: "home", wallIdx: null };
+  if (typeof window === "undefined") return { route: "home", wallDisplayN: null };
   const h = window.location.hash;
-  if (h.startsWith("#/whisper")) return { route: "whisper", wallIdx: null };
-  if (h.startsWith("#/mine")) return { route: "mine", wallIdx: null };
+  if (h.startsWith("#/whisper")) return { route: "whisper", wallDisplayN: null };
+  if (h.startsWith("#/mine")) return { route: "mine", wallDisplayN: null };
   if (h.startsWith("#/wall/")) {
     const num = parseInt(h.slice("#/wall/".length), 10);
     if (Number.isInteger(num) && num >= 1) {
-      return { route: "wall", wallIdx: num - 1 }; // 1-indexed URL → 0-indexed internal
+      return { route: "wall", wallDisplayN: num };
     }
-    return { route: "wall", wallIdx: null };
+    return { route: "wall", wallDisplayN: null };
   }
-  if (h.startsWith("#/wall")) return { route: "wall", wallIdx: null };
-  return { route: "home", wallIdx: null };
+  if (h.startsWith("#/wall")) return { route: "wall", wallDisplayN: null };
+  return { route: "home", wallDisplayN: null };
 }
 
 export function useHashRoute(): RouteState {
@@ -52,9 +62,7 @@ export function useHashRoute(): RouteState {
     }
   }, [state.route]);
 
-  // When switching back to home via an anchor (e.g. from #/whisper → #bento),
-  // the target element may not exist yet because React hasn't re-rendered.
-  // Wait a tick, then scroll into view.
+  // When switching back to home via an anchor, wait a tick then scroll
   useEffect(() => {
     if (state.route !== "home") return;
     const hash = window.location.hash;
@@ -71,7 +79,7 @@ export function useHashRoute(): RouteState {
   return state;
 }
 
-/** Helper: build a wall URL from a 0-indexed wallIdx */
-export function wallUrl(wallIdx: number): string {
-  return `#/wall/${wallIdx + 1}`;
+/** Helper: build a wall URL from a displayN (1 = newest) */
+export function wallUrl(displayN: number): string {
+  return `#/wall/${displayN}`;
 }

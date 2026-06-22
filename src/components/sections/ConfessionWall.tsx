@@ -6,7 +6,6 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { BRICK_BG } from "@/assets/brickBg";
 import {
   listConfessions,
-  getWallStats,
   type Confession as UserConfession,
 } from "@/lib/confessionsApi";
 
@@ -182,13 +181,19 @@ function userConfessionToNote(c: UserConfession, isMine: boolean): Note {
 
 export default function ConfessionWall({
   wallIdx,
+  displayN,
+  totalWalls,
   onNavigate,
   onNewConfession,
 }: {
-  /** 0-indexed wall index, from the URL (#/wall/N → wallIdx N-1) */
+  /** Internal 0-indexed wall index (oldest-first, used for API calls) */
   wallIdx: number;
-  /** Navigate to a different wall (changes the URL, which re-renders this component) */
-  onNavigate: (nextWallIdx: number) => void;
+  /** Display number (1-indexed, 1 = newest). Shown in the UI. */
+  displayN: number;
+  /** Total number of walls that exist. */
+  totalWalls: number;
+  /** Navigate to a different wall by displayN (1 = newest). Updates the URL. */
+  onNavigate: (nextDisplayN: number) => void;
   /** Called when a new user confession is created (lifted to parent so
    *  the composer can trigger it). Receives the new confession. */
   onNewConfession: (cb: (c: UserConfession) => void) => void;
@@ -202,9 +207,6 @@ export default function ConfessionWall({
   const [userNotes, setUserNotes] = useState<Note[]>([]);
   // Loading state for the initial fetch
   const [loading, setLoading] = useState(true);
-  // Total number of walls that exist (from /api/walls/stats). Walls grow
-  // as confessions arrive — this is the current finite count.
-  const [totalWalls, setTotalWalls] = useState(1);
   // Set of confession IDs (as strings) that the current user has posted
   const [mine, setMine] = useState<Set<string>>(() => loadMine());
   // The note currently in flight (composer → wall). When set, a FlyingNote
@@ -233,10 +235,10 @@ export default function ConfessionWall({
       saveMine(newMine);
 
       // If the confession landed on a different wall (auto-spawned because
-      // this wall was full), navigate there — the note will appear after
-      // the fetch on the new wall.
+      // this wall was full), navigate to the NEWEST wall (displayN=1).
+      // The new wall is always the newest, so displayN=1 is where it landed.
       if (c.wallIdx !== wallIdx) {
-        onNavigate(c.wallIdx);
+        onNavigate(1);
         return;
       }
 
@@ -366,19 +368,6 @@ export default function ConfessionWall({
     };
   }, [wallIdx, mine]);
 
-  /* Fetch total wall count (for the "N / total" counter) — refresh
-   * whenever a new confession is added (mine changes) or wall changes. */
-  useEffect(() => {
-    let cancelled = false;
-    getWallStats().then((stats) => {
-      if (cancelled || !stats) return;
-      setTotalWalls(stats.totalWalls);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [wallIdx, mine]);
-
   /* GSAP reveal of header on first mount */
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -447,22 +436,21 @@ export default function ConfessionWall({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, wallIdx]);
 
-  // Can we navigate forward? Walls grow as confessions arrive, but users
-  // can't navigate into walls that don't exist yet. The Next button, swipe,
-  // and → keyboard shortcut all check this.
-  const canGoNext = wallIdx + 1 < totalWalls;
-  const canGoPrev = wallIdx > 0;
+  // Navigation is reverse-chronological: displayN=1 is newest, displayN=totalWalls is oldest.
+  // Next = older (higher displayN), Prev = newer (lower displayN, toward 1).
+  const canGoNext = displayN < totalWalls; // can go to an older wall
+  const canGoPrev = displayN > 1;          // can go to a newer wall
 
   const goNext = () => {
-    if (!canGoNext) return; // no wall ahead — don't navigate into the void
+    if (!canGoNext) return; // already on the oldest wall
     setDirection(1);
-    onNavigate(wallIdx + 1);
+    onNavigate(displayN + 1);
     setDragHint(false);
   };
   const goPrev = () => {
-    if (!canGoPrev) return; // can't go before wall 0
+    if (!canGoPrev) return; // already on the newest wall (displayN=1)
     setDirection(-1);
-    onNavigate(wallIdx - 1);
+    onNavigate(displayN - 1);
     setDragHint(false);
   };
 
@@ -504,7 +492,7 @@ export default function ConfessionWall({
         <div className="mx-auto max-w-3xl">
           <div className="flex items-center justify-center gap-3">
             <span className="inline-block rotate-[-2deg] rounded-full border-2 border-cream bg-pink px-3 py-1 font-display text-[10px] font-extrabold uppercase tracking-widest text-cream shadow-[3px_3px_0_#0b0c10] sm:text-xs">
-              📌 wall {wallIdx + 1} / {totalWalls}
+              📌 wall {displayN} / {totalWalls}
             </span>
             <span className="font-hand text-base font-bold text-toxic drop-shadow-[2px_2px_0_rgba(11,12,16,0.6)] sm:text-xl">
               swipe right →
@@ -711,7 +699,7 @@ export default function ConfessionWall({
 
         {/* Wall counter — shows current wall number / total walls */}
         <div className="flex items-center gap-1.5 rounded-full border-2 border-cream bg-jet px-4 py-2 font-display text-xs font-extrabold uppercase tracking-widest text-cream shadow-[3px_3px_0_#fcf7f8]">
-          <span className="text-toxic">{wallIdx + 1}</span>
+          <span className="text-toxic">{displayN}</span>
           <span className="opacity-50">/</span>
           <span className="opacity-70">{totalWalls}</span>
         </div>

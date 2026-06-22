@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import SmoothScroll from "@/components/layout/SmoothScroll";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -14,7 +14,7 @@ import ConfessionWall from "@/components/sections/ConfessionWall";
 import ConfessionComposer from "@/components/sections/ConfessionComposer";
 import MyConfessions from "@/components/sections/MyConfessions";
 import { useHashRoute, wallUrl } from "@/hooks/useHashRoute";
-import type { Confession as UserConfession } from "@/lib/confessionsApi";
+import { getWallStats, type Confession as UserConfession } from "@/lib/confessionsApi";
 
 const WARNINGS = [
   "⚠️ Warning: May cause uncontrollable laughter",
@@ -70,20 +70,51 @@ function MinePage() {
 }
 
 /**
- * WallPage is URL-driven. The wallIdx comes from the hash (#/wall/N → N-1).
- * If no wall is specified (#/wall), it defaults to wall 0 (the newest).
+ * WallPage is URL-driven. The displayN comes from the hash (#/wall/N).
+ * displayN is 1-indexed where 1 = newest wall.
  *
- * The ConfessionWall registers its new-confession handler here so the
- * composer can trigger the flying-note animation.
+ * The internal wallIdx (used by the backend) is computed as:
+ *   wallIdx = totalWalls - displayN
+ *
+ * Wall numbering is reverse-chronological: when wall 1 fills up, it
+ * becomes wall 2, and a fresh wall 1 spawns for new confessions.
  */
-function WallPage({ wallIdx }: { wallIdx: number }) {
+function WallPage({ displayN }: { displayN: number }) {
+  const [totalWalls, setTotalWalls] = useState(1);
   const newConfessionHandlerRef = useRef<((c: UserConfession) => void) | null>(
     null
   );
 
-  const handleNavigate = useCallback((nextWallIdx: number) => {
-    // Update the URL — the route hook will re-render with the new wallIdx
-    window.location.hash = wallUrl(nextWallIdx);
+  /* Fetch totalWalls on mount + when a new confession is added */
+  useEffect(() => {
+    let cancelled = false;
+    getWallStats().then((stats) => {
+      if (cancelled || !stats) return;
+      setTotalWalls(stats.totalWalls);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /** Called by ConfessionWall when a new confession is created. Re-fetches
+   *  totalWalls (in case a new wall spawned) then triggers the flying-note
+   *  animation via the registered handler. */
+  const handleComposerSubmitted = useCallback(
+    (c: UserConfession) => {
+      // Re-fetch stats — a new wall may have spawned
+      getWallStats().then((stats) => {
+        if (stats) setTotalWalls(stats.totalWalls);
+        newConfessionHandlerRef.current?.(c);
+      });
+    },
+    []
+  );
+
+  /** Navigate to a different wall by displayN (1 = newest).
+   *  Updates the URL — the route hook re-renders with the new displayN. */
+  const handleNavigate = useCallback((nextDisplayN: number) => {
+    window.location.hash = wallUrl(nextDisplayN);
   }, []);
 
   const handleRegisterNewConfessionCb = useCallback(
@@ -93,19 +124,22 @@ function WallPage({ wallIdx }: { wallIdx: number }) {
     []
   );
 
-  const handleComposerSubmitted = useCallback((c: UserConfession) => {
-    newConfessionHandlerRef.current?.(c);
-  }, []);
+  // Compute internal wallIdx (0-indexed, oldest-first) from displayN.
+  // displayN=1 (newest) → wallIdx = totalWalls - 1
+  // displayN=totalWalls (oldest) → wallIdx = 0
+  const internalWallIdx = Math.max(0, totalWalls - displayN);
 
   return (
     <>
       <ConfessionWall
-        wallIdx={wallIdx}
+        wallIdx={internalWallIdx}
+        displayN={totalWalls - internalWallIdx}
+        totalWalls={totalWalls}
         onNavigate={handleNavigate}
         onNewConfession={handleRegisterNewConfessionCb}
       />
       <ConfessionComposer
-        wallIdx={wallIdx}
+        wallIdx={internalWallIdx}
         onSubmitted={handleComposerSubmitted}
       />
     </>
@@ -113,7 +147,7 @@ function WallPage({ wallIdx }: { wallIdx: number }) {
 }
 
 export default function App() {
-  const { route, wallIdx } = useHashRoute();
+  const { route, wallDisplayN } = useHashRoute();
 
   return (
     <SmoothScroll>
@@ -126,7 +160,7 @@ export default function App() {
           {route === "whisper" ? (
             <WhisperPage />
           ) : route === "wall" ? (
-            <WallPage wallIdx={wallIdx ?? 0} />
+            <WallPage displayN={wallDisplayN ?? 1} />
           ) : route === "mine" ? (
             <MinePage />
           ) : (
