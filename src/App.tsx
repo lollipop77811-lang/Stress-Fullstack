@@ -13,6 +13,7 @@ import WhisperWall from "@/components/sections/WhisperWall";
 import ConfessionWall from "@/components/sections/ConfessionWall";
 import ConfessionComposer from "@/components/sections/ConfessionComposer";
 import MyConfessions from "@/components/sections/MyConfessions";
+import ConfessionOfTheDay from "@/components/sections/ConfessionOfTheDay";
 import { useHashRoute, wallUrl } from "@/hooks/useHashRoute";
 import { getWallStats, type Confession as UserConfession } from "@/lib/confessionsApi";
 
@@ -33,6 +34,8 @@ function HomePage() {
       <TickerStrip items={WARNINGS} bg="jet" speed={28} />
 
       <BentoGrid />
+
+      <ConfessionOfTheDay />
 
       <JokeGenerator />
 

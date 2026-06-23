@@ -24,6 +24,8 @@ export type Confession = {
   aging: ConfessionAging;
   wallIdx: number;
   createdAt: string;
+  /** Number of times this confession has been witnessed. */
+  witnessCount?: number;
   /** Only returned by GET /api/mine — true if the confession has been
    *  archived off its wall (wall-cap eviction). */
   isArchived?: boolean;
@@ -52,6 +54,11 @@ export type WallStats = {
   totalWalls: number;
   totalConfessions: number;
   wallCap: number;
+};
+
+export type WitnessResponse = {
+  witnessed: boolean;
+  witnessCount: number;
 };
 
 /**
@@ -154,6 +161,42 @@ export async function getWallStats(): Promise<WallStats | null> {
     console.warn("[confessionsApi] getWallStats failed:", err);
     return null;
   }
+}
+
+/**
+ * Fetch the "Confession of the Day" — most-witnessed from last 24h.
+ * Returns null if the DB is empty.
+ */
+export async function getFeaturedConfession(): Promise<Confession | null> {
+  try {
+    const res = await fetch(`${API_URL}/confessions/featured`, {
+      headers: { Accept: "application/json" },
+    });
+    const data = await handle<{ confession: Confession | null }>(res);
+    return data.confession;
+  } catch (err) {
+    console.warn("[confessionsApi] getFeaturedConfession failed:", err);
+    return null;
+  }
+}
+
+/**
+ * Witness a confession. Sends the browser's sessionId for dedup (one
+ * witness per browser session per confession). Returns the new count.
+ *
+ * The caller should track locally whether they've already witnessed (via
+ * localStorage) to avoid unnecessary API calls + enable optimistic UI.
+ */
+export async function witnessConfession(
+  id: string,
+  sessionId: string
+): Promise<WitnessResponse> {
+  const res = await fetch(`${API_URL}/confessions/${id}/witness`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ sessionId }),
+  });
+  return handle<WitnessResponse>(res);
 }
 
 /**

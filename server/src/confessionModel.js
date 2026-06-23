@@ -52,6 +52,20 @@ const confessionSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    witnessCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+      index: true,
+    },
+    /** Array of sessionIds that have witnessed this confession.
+     *  Used for dedup (one witness per browser session).
+     *  Not returned in API responses (select: false). */
+    witnessedBy: {
+      type: [String],
+      default: [],
+      select: false,
+    },
     ipHash: { type: String, default: null, select: false },
   },
   { timestamps: true }
@@ -59,6 +73,8 @@ const confessionSchema = new mongoose.Schema(
 
 // Index for the most common query: list confessions on a wall newest-first
 confessionSchema.index({ wallIdx: 1, isArchived: 1, createdAt: -1 });
+// Index for "confession of the day" — most-witnessed in last 24h
+confessionSchema.index({ witnessCount: -1, createdAt: -1 });
 
 // Static helpers
 confessionSchema.statics = {

@@ -6,6 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { BRICK_BG } from "@/assets/brickBg";
 import {
   listConfessions,
+  witnessConfession,
   type Confession as UserConfession,
 } from "@/lib/confessionsApi";
 
@@ -31,6 +32,10 @@ type Note = {
   w: number; // px width (varies for realism)
   /** True if this note was added by the current user (shows "★ yours" badge) */
   isMine?: boolean;
+  /** Number of witnesses (from backend). 0 if not yet witnessed. */
+  witnessCount?: number;
+  /** True if the current browser session has already witnessed this note. */
+  witnessed?: boolean;
 };
 
 /* ============================================================
@@ -140,12 +145,56 @@ function saveMine(set: Set<string>) {
   }
 }
 
+/* localStorage key for tracking which confessions the current browser
+ * session has witnessed (for the witness button dedup). */
+const WITNESSED_KEY = "osk.confessions.witnessed.v1";
+/* localStorage key for the session ID (used as the dedup key on the
+ * server — one witness per browser session per confession). */
+const SESSION_KEY = "osk.sessionId.v1";
+
+function loadWitnessed(): Set<string> {
+  try {
+    const raw = localStorage.getItem(WITNESSED_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr)) return new Set(arr.filter((x) => typeof x === "string"));
+  } catch {
+    /* ignore */
+  }
+  return new Set();
+}
+
+function saveWitnessed(set: Set<string>) {
+  try {
+    localStorage.setItem(WITNESSED_KEY, JSON.stringify([...set]));
+  } catch {
+    /* ignore */
+  }
+}
+
+function getSessionId(): string {
+  try {
+    let id = localStorage.getItem(SESSION_KEY);
+    if (!id) {
+      id = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem(SESSION_KEY, id);
+    }
+    return id;
+  } catch {
+    return "anon-" + Math.random().toString(36).slice(2);
+  }
+}
+
 /**
  * Convert a user confession fetched from the API into a Note the wall
  * can render. Positions are assigned deterministically by hashing the
  * confession id so the same note always lands in the same spot.
  */
-function userConfessionToNote(c: UserConfession, isMine: boolean): Note {
+function userConfessionToNote(
+  c: UserConfession,
+  isMine: boolean,
+  witnessed: boolean
+): Note {
   // Hash the id → 0..1 for position & rotation
   const str = typeof c.id === "string" ? c.id : String(c.id);
   let h = 0;
@@ -176,6 +225,8 @@ function userConfessionToNote(c: UserConfession, isMine: boolean): Note {
     rot,
     w,
     isMine,
+    witnessCount: c.witnessCount ?? 0,
+    witnessed,
   };
 }
 
@@ -209,6 +260,10 @@ export default function ConfessionWall({
   const [loading, setLoading] = useState(true);
   // Set of confession IDs (as strings) that the current user has posted
   const [mine, setMine] = useState<Set<string>>(() => loadMine());
+  // Set of confession IDs this browser session has witnessed (for dedup UI)
+  const [witnessed, setWitnessed] = useState<Set<string>>(() => loadWitnessed());
+  // Stable session ID for witness dedup on the server
+  const sessionIdRef = useRef<string>(getSessionId());
   // The note currently in flight (composer → wall). When set, a FlyingNote
   // portal is rendered; on landing it's swapped for a real wall note.
   const [flyingNote, setFlyingNote] = useState<{
@@ -242,7 +297,7 @@ export default function ConfessionWall({
         return;
       }
 
-      const futureNote = userConfessionToNote(c, true);
+      const futureNote = userConfessionToNote(c, true, false);
       const prefersReduced = window.matchMedia(
         "(prefers-reduced-motion: reduce)"
       ).matches;
@@ -351,6 +406,53 @@ export default function ConfessionWall({
     );
   }
 
+  /** Witness a confession: optimistic +1, send to API, sync on response. */
+  async function handleWitness(noteId: string | number) {
+    const idStr = String(noteId);
+    if (witnessed.has(idStr)) return; // already witnessed — no-op
+
+    // Optimistic: immediately mark as witnessed + bump count in local state
+    const newWitnessed = new Set(witnessed);
+    newWitnessed.add(idStr);
+    setWitnessed(newWitnessed);
+    saveWitnessed(newWitnessed);
+
+    setUserNotes((prev) =>
+      prev.map((n) =>
+        String(n.id) === idStr
+          ? {
+              ...n,
+              witnessed: true,
+              witnessCount: (n.witnessCount ?? 0) + 1,
+            }
+          : n
+      )
+    );
+
+    try {
+      await witnessConfession(idStr, sessionIdRef.current);
+      // Success — optimistic state is correct, nothing more to do
+    } catch (err) {
+      // Roll back on failure
+      console.warn("[witness] failed, rolling back:", err);
+      const rolledBack = new Set(witnessed);
+      rolledBack.delete(idStr);
+      setWitnessed(rolledBack);
+      saveWitnessed(rolledBack);
+      setUserNotes((prev) =>
+        prev.map((n) =>
+          String(n.id) === idStr
+            ? {
+                ...n,
+                witnessed: false,
+                witnessCount: Math.max(0, (n.witnessCount ?? 1) - 1),
+              }
+            : n
+        )
+      );
+    }
+  }
+
   /* Fetch user confessions whenever wallIdx changes */
   useEffect(() => {
     let cancelled = false;
@@ -358,7 +460,7 @@ export default function ConfessionWall({
     listConfessions(wallIdx).then((list) => {
       if (cancelled) return;
       const notes = list.map((c) =>
-        userConfessionToNote(c, mine.has(String(c.id)))
+        userConfessionToNote(c, mine.has(String(c.id)), witnessed.has(String(c.id)))
       );
       setUserNotes(notes);
       setLoading(false);
@@ -366,7 +468,7 @@ export default function ConfessionWall({
     return () => {
       cancelled = true;
     };
-  }, [wallIdx, mine]);
+  }, [wallIdx, mine, witnessed]);
 
   /* GSAP reveal of header on first mount */
   useLayoutEffect(() => {
@@ -646,14 +748,29 @@ export default function ConfessionWall({
                       {n.text}
                     </p>
 
-                    {/* Footer */}
-                    <div className="relative mt-2 flex items-center justify-between border-t border-current/20 pt-1">
+                    {/* Footer — author + witness button */}
+                    <div className="relative mt-2 flex items-center justify-between gap-1.5 border-t border-current/20 pt-1.5">
                       <span className="truncate text-[9px] font-bold uppercase tracking-wide opacity-60">
                         — {n.author}
                       </span>
-                      <span className="ml-1 shrink-0 text-[9px] font-bold uppercase opacity-50">
-                        #{n.id}
-                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleWitness(n.id);
+                        }}
+                        disabled={n.witnessed}
+                        data-hover={n.witnessed ? "SEEN" : "WITNESS"}
+                        aria-label={n.witnessed ? "Already witnessed" : "Witness this confession"}
+                        className={
+                          "shrink-0 inline-flex items-center gap-1 rounded-full border border-current px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide transition-[transform,opacity,background-color] duration-150 " +
+                          (n.witnessed
+                            ? "opacity-50 cursor-default"
+                            : "hover:scale-110 hover:bg-current/10")
+                        }
+                      >
+                        <span>👁️</span>
+                        <span className="tabular-nums">{n.witnessCount ?? 0}</span>
+                      </button>
                     </div>
 
                     {/* Hover hint */}

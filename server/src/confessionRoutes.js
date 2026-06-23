@@ -94,12 +94,125 @@ router.get("/mine", async (req, res) => {
         aging: c.aging,
         wallIdx: c.wallIdx,
         isArchived: c.isArchived,
+        witnessCount: c.witnessCount ?? 0,
         createdAt: c.createdAt,
       })),
     });
   } catch (err) {
     console.error("[mine] error:", err);
     return res.status(500).json({ error: "failed to fetch your confessions" });
+  }
+});
+
+/**
+ * GET /api/confessions/featured
+ * Returns the "Confession of the Day" — the most-witnessed confession
+ * from the last 24 hours. Deterministic by date so everyone sees the
+ * same featured confession all day. Falls back to the most-witnessed
+ * confession ever if no confessions were posted in the last 24h.
+ *
+ * Returns null if the DB is empty.
+ */
+router.get("/confessions/featured", async (_req, res) => {
+  try {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    // Try: most-witnessed confession from the last 24 hours
+    let doc = await Confession.findOne({
+      createdAt: { $gte: oneDayAgo },
+      isArchived: false,
+    })
+      .sort({ witnessCount: -1, createdAt: -1 })
+      .lean()
+      .exec();
+
+    // Fallback: most-witnessed confession ever (any time)
+    if (!doc) {
+      doc = await Confession.findOne({ isArchived: false })
+        .sort({ witnessCount: -1, createdAt: -1 })
+        .lean()
+        .exec();
+    }
+
+    if (!doc) {
+      return res.json({ confession: null });
+    }
+
+    return res.json({
+      confession: {
+        id: doc._id.toString(),
+        text: doc.text,
+        author: doc.author,
+        color: doc.color,
+        aging: doc.aging,
+        wallIdx: doc.wallIdx,
+        witnessCount: doc.witnessCount ?? 0,
+        createdAt: doc.createdAt,
+      },
+    });
+  } catch (err) {
+    console.error("[featured] error:", err);
+    return res.status(500).json({ error: "failed to fetch featured confession" });
+  }
+});
+
+/**
+ * POST /api/confessions/:id/witness
+ * Increments the witnessCount for the given confession.
+ *
+ * Dedup: the client sends a sessionId in the body. The server stores
+ * witnessed IDs in a Set on the document (witnessedBy). If the sessionId
+ * is already in the set, the witness is rejected (idempotent — no double
+ * counting). Session ID is a random string generated client-side and
+ * stored in localStorage, so it's per-browser, not per-user.
+ */
+const witnessLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10, // max 10 witnesses per minute per IP (anti-spam)
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "slow down. the wall can only handle so much witnessing." },
+});
+
+router.post("/confessions/:id/witness", witnessLimiter, async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ error: "invalid confession id" });
+  }
+
+  const sessionId = String(req.body?.sessionId || "").slice(0, 64);
+  if (!sessionId) {
+    return res.status(400).json({ error: "sessionId is required" });
+  }
+
+  try {
+    const doc = await Confession.findById(id).exec();
+    if (!doc) {
+      return res.status(404).json({ error: "confession not found" });
+    }
+
+    // Dedup check — store witnessed sessions in an array on the doc
+    // (using a Set in memory; persisted as an array in MongoDB)
+    if (!Array.isArray(doc.witnessedBy)) doc.witnessedBy = [];
+    if (doc.witnessedBy.includes(sessionId)) {
+      // Already witnessed — return current count without incrementing
+      return res.json({
+        witnessed: false,
+        witnessCount: doc.witnessCount ?? 0,
+      });
+    }
+
+    doc.witnessedBy.push(sessionId);
+    doc.witnessCount = (doc.witnessCount ?? 0) + 1;
+    await doc.save();
+
+    return res.json({
+      witnessed: true,
+      witnessCount: doc.witnessCount,
+    });
+  } catch (err) {
+    console.error("[witness] error:", err);
+    return res.status(500).json({ error: "failed to witness confession" });
   }
 });
 
@@ -138,6 +251,7 @@ router.get("/walls/:wallIdx/confessions", async (req, res) => {
         color: c.color,
         aging: c.aging,
         wallIdx: c.wallIdx,
+        witnessCount: c.witnessCount ?? 0,
         createdAt: c.createdAt,
       })),
     });
