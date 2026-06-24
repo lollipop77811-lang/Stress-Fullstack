@@ -14,6 +14,7 @@ import ConfessionWall from "@/components/sections/ConfessionWall";
 import ConfessionComposer from "@/components/sections/ConfessionComposer";
 import MyConfessions from "@/components/sections/MyConfessions";
 import ConfessionOfTheDay from "@/components/sections/ConfessionOfTheDay";
+import DailyStressHoroscope from "@/components/sections/DailyStressHoroscope";
 import { useHashRoute, wallUrl } from "@/hooks/useHashRoute";
 import { getWallStats, type Confession as UserConfession } from "@/lib/confessionsApi";
 
@@ -70,6 +71,12 @@ function WhisperPage() {
  *  has posted, pulled from the backend by ID (tracked in localStorage). */
 function MinePage() {
   return <MyConfessions />;
+}
+
+/** "🔮 Daily Stress Horoscope" page — deterministic by date, refreshes
+ *  at midnight (local time). Same prediction for everyone all day. */
+function HoroscopePage() {
+  return <DailyStressHoroscope />;
 }
 
 /**
@@ -166,6 +173,8 @@ export default function App() {
             <WallPage displayN={wallDisplayN ?? 1} />
           ) : route === "mine" ? (
             <MinePage />
+          ) : route === "horoscope" ? (
+            <HoroscopePage />
           ) : (
             <HomePage />
           )}

@@ -9,6 +9,7 @@ const LINKS = [
   { label: "Jokes", href: "#jokes", hover: "HIT!" },
   { label: "Confess", href: "#/wall", hover: "READ" },
   { label: "Whisper", href: "#/whisper", hover: "SHHH" },
+  { label: "Horoscope", href: "#/horoscope", hover: "🔮" },
   { label: "Join", href: "#newsletter", hover: "SUB" },
 ];
 

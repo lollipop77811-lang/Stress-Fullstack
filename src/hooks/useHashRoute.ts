@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 
 /**
  * Routes:
- *   "" / "#top" / "#bento" / ... → "home"    (anchor-based in-page nav)
- *   "#/whisper"                  → "whisper" (anonymous ephemeral confessions)
- *   "#/wall"                     → "wall"    (wall page, default to newest = displayN 1)
- *   "#/wall/3"                   → "wall"    (wall page, displayN = 3)
- *   "#/mine"                     → "mine"    (user's own confessions)
+ *   "" / "#top" / "#bento" / ... → "home"       (anchor-based in-page nav)
+ *   "#/whisper"                  → "whisper"    (anonymous ephemeral confessions)
+ *   "#/wall"                     → "wall"       (wall page, default to newest = displayN 1)
+ *   "#/wall/3"                   → "wall"       (wall page, displayN = 3)
+ *   "#/mine"                     → "mine"       (user's own confessions)
+ *   "#/horoscope"                → "horoscope"  (daily stress horoscope)
  *
  * Wall numbering is REVERSE-CHRONOLOGICAL:
  *   displayN = 1  → newest wall (where new confessions go)
@@ -21,7 +22,7 @@ import { useEffect, useState } from "react";
  * The route hook returns displayN. The parent (App.tsx) fetches totalWalls
  * from the API and computes the internal wallIdx.
  */
-export type Route = "home" | "whisper" | "wall" | "mine";
+export type Route = "home" | "whisper" | "wall" | "mine" | "horoscope";
 
 export type RouteState = {
   route: Route;
@@ -35,6 +36,7 @@ function parse(): RouteState {
   const h = window.location.hash;
   if (h.startsWith("#/whisper")) return { route: "whisper", wallDisplayN: null };
   if (h.startsWith("#/mine")) return { route: "mine", wallDisplayN: null };
+  if (h.startsWith("#/horoscope")) return { route: "horoscope", wallDisplayN: null };
   if (h.startsWith("#/wall/")) {
     const num = parseInt(h.slice("#/wall/".length), 10);
     if (Number.isInteger(num) && num >= 1) {
@@ -57,7 +59,7 @@ export function useHashRoute(): RouteState {
 
   // Scroll to top whenever we switch to a dedicated route page
   useEffect(() => {
-    if (state.route === "whisper" || state.route === "wall" || state.route === "mine") {
+    if (state.route === "whisper" || state.route === "wall" || state.route === "mine" || state.route === "horoscope") {
       window.scrollTo(0, 0);
     }
   }, [state.route]);
