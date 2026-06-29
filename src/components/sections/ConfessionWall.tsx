@@ -4,6 +4,7 @@ import { motion, AnimatePresence, type PanInfo } from "framer-motion";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { BRICK_BG } from "@/assets/brickBg";
+import ShareButtons from "@/components/ui/ShareButtons";
 import {
   listConfessions,
   witnessConfession,
@@ -973,6 +974,20 @@ export default function ConfessionWall({
                   stay anonymous · stay honest
                 </span>
               </div>
+
+              {/* Share buttons — only on user confessions (have a string id) */}
+              {typeof open.id === "string" && (
+                <div className="mt-4 border-t-2 border-current/20 pt-4">
+                  <p className="mb-2 font-display text-[10px] font-extrabold uppercase tracking-widest opacity-60">
+                    ↳ share this confession
+                  </p>
+                  <ShareButtons
+                    text={open.text}
+                    author={open.author}
+                    id={open.id}
+                  />
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

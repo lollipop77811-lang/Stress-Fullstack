@@ -15,6 +15,7 @@ import ConfessionComposer from "@/components/sections/ConfessionComposer";
 import MyConfessions from "@/components/sections/MyConfessions";
 import ConfessionOfTheDay from "@/components/sections/ConfessionOfTheDay";
 import DailyStressHoroscope from "@/components/sections/DailyStressHoroscope";
+import ConfessionDeepLink from "@/components/sections/ConfessionDeepLink";
 import { useHashRoute, wallUrl } from "@/hooks/useHashRoute";
 import { getWallStats, type Confession as UserConfession } from "@/lib/confessionsApi";
 
@@ -77,6 +78,13 @@ function MinePage() {
  *  at midnight (local time). Same prediction for everyone all day. */
 function HoroscopePage() {
   return <DailyStressHoroscope />;
+}
+
+/** "🔗 Shared Confession" deep-link page — loads a single confession
+ *  by ID from the URL (#/c/<id>). Used when someone clicks a shared
+ *  confession link (copy link / X / WhatsApp / native share). */
+function ConfessionPage({ id }: { id: string }) {
+  return <ConfessionDeepLink id={id} />;
 }
 
 /**
@@ -157,7 +165,7 @@ function WallPage({ displayN }: { displayN: number }) {
 }
 
 export default function App() {
-  const { route, wallDisplayN } = useHashRoute();
+  const { route, wallDisplayN, confessionId } = useHashRoute();
 
   return (
     <SmoothScroll>
@@ -175,6 +183,8 @@ export default function App() {
             <MinePage />
           ) : route === "horoscope" ? (
             <HoroscopePage />
+          ) : route === "confession" && confessionId ? (
+            <ConfessionPage id={confessionId} />
           ) : (
             <HomePage />
           )}

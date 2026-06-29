@@ -164,6 +164,24 @@ export async function getWallStats(): Promise<WallStats | null> {
 }
 
 /**
+ * Fetch a single confession by ID. Used by the deep-link page (#/c/<id>)
+ * so shared confession links load directly. Returns null on error or 404.
+ */
+export async function getConfessionById(id: string): Promise<Confession | null> {
+  try {
+    const res = await fetch(`${API_URL}/confessions/${id}`, {
+      headers: { Accept: "application/json" },
+    });
+    if (res.status === 404) return null;
+    const data = await handle<{ confession: Confession }>(res);
+    return data.confession;
+  } catch (err) {
+    console.warn("[confessionsApi] getConfessionById failed:", err);
+    return null;
+  }
+}
+
+/**
  * Fetch the "Confession of the Day" — most-witnessed from last 24h.
  * Returns null if the DB is empty.
  */

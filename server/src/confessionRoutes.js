@@ -217,6 +217,44 @@ router.post("/confessions/:id/witness", witnessLimiter, async (req, res) => {
 });
 
 /**
+ * GET /api/confessions/:id
+ * Returns a single confession by ID. Used by the deep-link page
+ * (#/c/<id>) so shared confession links can load directly.
+ *
+ * Returns 404 if the confession doesn't exist (or has been deleted).
+ * Includes archived confessions — sharing works even after a
+ * confession has been pushed off its wall.
+ */
+router.get("/confessions/:id", async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ error: "invalid confession id" });
+  }
+  try {
+    const doc = await Confession.findById(id).lean().exec();
+    if (!doc) {
+      return res.status(404).json({ error: "confession not found" });
+    }
+    return res.json({
+      confession: {
+        id: doc._id.toString(),
+        text: doc.text,
+        author: doc.author,
+        color: doc.color,
+        aging: doc.aging,
+        wallIdx: doc.wallIdx,
+        isArchived: doc.isArchived,
+        witnessCount: doc.witnessCount ?? 0,
+        createdAt: doc.createdAt,
+      },
+    });
+  } catch (err) {
+    console.error("[confessions/get] error:", err);
+    return res.status(500).json({ error: "failed to fetch confession" });
+  }
+});
+
+/**
  * GET /api/walls/:wallIdx/confessions
  * Returns all non-archived confessions for the given wall, newest first.
  * wallIdx can be any non-negative integer (walls are infinite).
