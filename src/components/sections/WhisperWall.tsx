@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, type FormEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -6,6 +6,62 @@ import Stamp from "@/components/ui/Stamp";
 import { cn } from "@/utils/cn";
 
 gsap.registerPlugin(ScrollTrigger);
+
+/* ============================================================
+   TYPING-REACTS — keyword responses + headline wobble
+   The Whisper Wall headline reacts to what the user types.
+   ============================================================ */
+
+type KeywordResponse = {
+  keywords: string[];
+  subtitle: string;
+  subtitleColor: string;
+};
+
+const KEYWORD_RESPONSES: KeywordResponse[] = [
+  { keywords: ["alone"], subtitle: "you're not. 847 confessions say otherwise.", subtitleColor: "var(--color-toxic)" },
+  { keywords: ["tired", "exhausted"], subtitle: "rest is valid. the wall will wait.", subtitleColor: "var(--color-toxic)" },
+  { keywords: ["scared", "afraid", "anxious", "anxiety"], subtitle: "bravery is being scared and typing anyway.", subtitleColor: "var(--color-electric)" },
+  { keywords: ["stress", "stressed", "overwhelmed"], subtitle: "we hear you. the bricks are listening.", subtitleColor: "var(--color-pink)" },
+  { keywords: ["help"], subtitle: "💙 you matter. 988lifeline.org · text HOME to 741741", subtitleColor: "var(--color-electric)" },
+  { keywords: ["fail", "failure", "failed"], subtitle: "failing is just data. the wall collects it.", subtitleColor: "var(--color-toxic)" },
+  { keywords: ["hate"], subtitle: "the wall doesn't hate. it just holds.", subtitleColor: "var(--color-toxic)" },
+  { keywords: ["can't", "cant", "cannot"], subtitle: "can't is just a tired 'not yet.' rest first.", subtitleColor: "var(--color-toxic)" },
+  { keywords: ["nobody", "no one"], subtitle: "somebody is reading this wall right now. hi.", subtitleColor: "var(--color-toxic)" },
+  { keywords: ["pretend", "pretending", "fake"], subtitle: "you can stop here. the wall doesn't pretend.", subtitleColor: "var(--color-toxic)" },
+  { keywords: ["lost", "losing"], subtitle: "being lost means you're going somewhere new.", subtitleColor: "var(--color-electric)" },
+  { keywords: ["give up", "giving up", "quit"], subtitle: "the wall has seen 'give up' before. they stayed. you can too.", subtitleColor: "var(--color-electric)" },
+];
+
+const DEFAULT_SUBTITLE = "Drop a secret. Strangers will witness it. Then it dissolves into the void.";
+const DEFAULT_SUBTITLE_COLOR = "var(--color-toxic)";
+const PAUSE_MSG = "take your time. the wall is patient.";
+
+const LENGTH_NUDGES: { at: number; msg: string }[] = [
+  { at: 50, msg: "↳ keep going. the wall is listening." },
+  { at: 100, msg: "↳ that's real. the wall holds real things." },
+  { at: 150, msg: "↳ almost there. one more breath." },
+  { at: 200, msg: "↳ that's enough. the wall has it now." },
+];
+
+function getKeywordResponse(text: string): KeywordResponse | null {
+  const lower = text.toLowerCase();
+  // Use word-boundary matching to avoid false positives (e.g. "hate" in "that")
+  for (const kr of KEYWORD_RESPONSES) {
+    for (const kw of kr.keywords) {
+      const regex = new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+      if (regex.test(lower)) return kr;
+    }
+  }
+  return null;
+}
+
+function getLengthNudge(charCount: number): string | null {
+  for (let i = LENGTH_NUDGES.length - 1; i >= 0; i--) {
+    if (charCount >= LENGTH_NUDGES[i].at) return LENGTH_NUDGES[i].msg;
+  }
+  return null;
+}
 
 /* ---------- types ---------- */
 
@@ -88,6 +144,75 @@ export default function WhisperWall() {
   const [whispers, setWhispers] = useState<Whisper[]>(SEED);
   const [tick, setTick] = useState(0); // forces re-render for countdowns
   const [nextId, setNextId] = useState(4750);
+
+  // --- Typing-reacts state ---
+  const [wobbleKey, setWobbleKey] = useState(0); // increments on each keystroke to trigger wobble
+  const [panicMode, setPanicMode] = useState(false); // true when typing fast
+  const [reactiveSubtitle, setReactiveSubtitle] = useState(DEFAULT_SUBTITLE);
+  const [reactiveSubtitleColor, setReactiveSubtitleColor] = useState(DEFAULT_SUBTITLE_COLOR);
+  const [lengthNudge, setLengthNudge] = useState<string | null>(null);
+  const [paused, setPaused] = useState(false);
+  const lastKeyTimeRef = useRef<number>(0);
+  const keyDeltaRef = useRef<number>(300);
+  const pauseTimerRef = useRef<number | null>(null);
+  const keywordTimerRef = useRef<number | null>(null);
+
+  // Headline letters for wobble — split "The Whisper Wall" into spans
+  const headlineParts = [
+    { text: "The Whisper", className: "text-cream" },
+    { text: "Wall", className: "text-stroke-cream" },
+  ];
+  const headlineLetters = headlineParts.flatMap((part, partIdx) =>
+    part.text.split("").map((ch, i) => ({
+      key: `${partIdx}-${i}`,
+      char: ch,
+      className: part.className,
+    }))
+  );
+
+  const handleTextChange = useCallback((newText: string) => {
+    setText(newText.slice(0, charMax));
+    setWobbleKey((k) => k + 1);
+    setPaused(false);
+
+    // Detect typing speed
+    const now = Date.now();
+    const delta = now - lastKeyTimeRef.current;
+    lastKeyTimeRef.current = now;
+    keyDeltaRef.current = delta;
+    setPanicMode(delta < 120); // fast typing = panic
+
+    // Length nudge
+    setLengthNudge(getLengthNudge(newText.length));
+
+    // Debounced keyword scan (500ms after user stops typing)
+    if (keywordTimerRef.current) window.clearTimeout(keywordTimerRef.current);
+    keywordTimerRef.current = window.setTimeout(() => {
+      const kr = getKeywordResponse(newText);
+      if (kr) {
+        setReactiveSubtitle(kr.subtitle);
+        setReactiveSubtitleColor(kr.subtitleColor);
+      } else {
+        setReactiveSubtitle(DEFAULT_SUBTITLE);
+        setReactiveSubtitleColor(DEFAULT_SUBTITLE_COLOR);
+      }
+    }, 400);
+
+    // Pause detection (3s of no typing)
+    if (pauseTimerRef.current) window.clearTimeout(pauseTimerRef.current);
+    pauseTimerRef.current = window.setTimeout(() => {
+      setPaused(true);
+      setPanicMode(false);
+    }, 3000);
+  }, []);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (pauseTimerRef.current) window.clearTimeout(pauseTimerRef.current);
+      if (keywordTimerRef.current) window.clearTimeout(keywordTimerRef.current);
+    };
+  }, []);
 
   /* GSAP reveal */
   useLayoutEffect(() => {
@@ -213,17 +338,61 @@ export default function WhisperWall() {
             <p className="mt-2 text-xs font-extrabold uppercase tracking-[0.3em] text-toxic">
               Anonymous
             </p>
-            <h2 className="mt-1 font-display text-4xl font-extrabold uppercase leading-[0.9] tracking-tight text-cream sm:text-6xl">
-              The Whisper
-              <br />
-              <span className="text-stroke-cream">Wall</span>
+            <h2 className="mt-1 font-display text-4xl font-extrabold uppercase leading-[0.9] tracking-tight sm:text-6xl">
+              {headlineLetters.map((letter, i) => (
+                <motion.span
+                  key={letter.key}
+                  className={cn("inline-block", letter.className)}
+                  animate={
+                    wobbleKey > 0
+                      ? {
+                          y: panicMode
+                            ? [0, -3, 2, -1, 0]
+                            : [0, -6, 0],
+                          rotate: panicMode
+                            ? [0, -2, 2, -1, 0]
+                            : [0, -4, 0],
+                        }
+                      : {}
+                  }
+                  transition={{
+                    duration: panicMode ? 0.2 : 0.4,
+                    ease: "easeOut",
+                    delay: panicMode ? 0 : (i % 5) * 0.02,
+                  }}
+                >
+                  {letter.char === " " ? "\u00A0" : letter.char}
+                </motion.span>
+              ))}
             </h2>
+            {/* Reactive subtitle — changes based on what the user types */}
             <p className="mt-4 max-w-lg font-body text-base text-cream/70 sm:text-lg">
-              Drop a secret. Strangers will witness it. Then it dissolves into
-              the void.{" "}
-              <span className="font-hand text-xl font-bold text-toxic">
-                No usernames. No history. No vibe killer.
-              </span>
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={reactiveSubtitle + paused}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3 }}
+                  className="inline-block"
+                >
+                  {paused ? (
+                    <span className="font-hand text-xl font-bold text-toxic">
+                      {PAUSE_MSG}
+                    </span>
+                  ) : (
+                    <>
+                      {reactiveSubtitle}{" "}
+                      <span
+                        className="font-hand text-xl font-bold"
+                        style={{ color: reactiveSubtitleColor }}
+                      >
+                        No usernames. No history. No vibe killer.
+                      </span>
+                    </>
+                  )}
+                </motion.span>
+              </AnimatePresence>
             </p>
           </div>
           <div className="flex flex-col items-start gap-2 sm:items-end">
@@ -283,7 +452,7 @@ export default function WhisperWall() {
               <div className="flex-1">
                 <textarea
                   value={text}
-                  onChange={(e) => setText(e.target.value.slice(0, charMax))}
+                  onChange={(e) => handleTextChange(e.target.value)}
                   placeholder="whisper something. no one will know. (200 chars of pure release)"
                   rows={2}
                   data-hover="VENT"
@@ -291,7 +460,7 @@ export default function WhisperWall() {
                 />
                 <div className="mt-1.5 flex items-center justify-between px-1">
                   <span className="font-hand text-sm font-bold text-cream/60">
-                    yes, really anonymous. no, we won't tell.
+                    {lengthNudge || "yes, really anonymous. no, we won't tell."}
                   </span>
                   <span
                     className={cn(
