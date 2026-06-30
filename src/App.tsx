@@ -16,6 +16,7 @@ import MyConfessions from "@/components/sections/MyConfessions";
 import ConfessionOfTheDay from "@/components/sections/ConfessionOfTheDay";
 import DailyStressHoroscope from "@/components/sections/DailyStressHoroscope";
 import ConfessionDeepLink from "@/components/sections/ConfessionDeepLink";
+import LegalPage from "@/components/sections/LegalPage";
 import { useHashRoute, wallUrl } from "@/hooks/useHashRoute";
 import { getWallStats, type Confession as UserConfession } from "@/lib/confessionsApi";
 
@@ -185,6 +186,10 @@ export default function App() {
             <HoroscopePage />
           ) : route === "confession" && confessionId ? (
             <ConfessionPage id={confessionId} />
+          ) : route === "privacy" ? (
+            <LegalPage page="privacy" />
+          ) : route === "terms" ? (
+            <LegalPage page="terms" />
           ) : (
             <HomePage />
           )}

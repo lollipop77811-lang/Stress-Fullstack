@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as BadWords from "bad-words";
 import { cn } from "@/utils/cn";
+import CrisisOverlay from "@/components/ui/CrisisOverlay";
 import {
   createConfession,
   type ConfessionAging,
@@ -67,6 +68,7 @@ export default function ConfessionComposer({ wallIdx, onSubmitted }: Props) {
   const [aging, setAging] = useState<ConfessionAging>("fresh");
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ kind: "ok" | "err"; msg: string } | null>(null);
+  const [showCrisis, setShowCrisis] = useState(false);
 
   // Filter profanity on the way in (replace slurs with **** so user sees it)
   const filteredText = useMemo(() => {
@@ -105,12 +107,26 @@ export default function ConfessionComposer({ wallIdx, onSubmitted }: Props) {
       setAuthor("");
       setColor("yellow");
       setAging("fresh");
-      showToast(
-        "ok",
-        result.spawnedNewWall
-          ? `stuck. 👍 wall ${result.actualWallIdx + 1} is fresh — you're the first to pin here.`
-          : "stuck. 👍 your secret is now legally binding."
-      );
+
+      // --- Safety response handling ---
+      if (result.isFlagged) {
+        // Crisis language detected → show supportive overlay (not the normal toast)
+        setShowCrisis(true);
+      } else if (result.strippedPII && result.strippedPII.length > 0) {
+        // PII was stripped → warn the user
+        showToast(
+          "ok",
+          `stuck. 👍 (we stripped ${result.strippedPII.join(", ")} from your confession — please don't share personal info.)`
+        );
+      } else {
+        // Normal success
+        showToast(
+          "ok",
+          result.spawnedNewWall
+            ? `stuck. 👍 wall ${result.actualWallIdx + 1} is fresh — you're the first to pin here.`
+            : "stuck. 👍 your secret is now legally binding."
+        );
+      }
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "couldn't reach the wall. try again.";
@@ -348,6 +364,9 @@ export default function ConfessionComposer({ wallIdx, onSubmitted }: Props) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Crisis overlay — shown if the confession contained self-harm language */}
+      <CrisisOverlay show={showCrisis} onClose={() => setShowCrisis(false)} />
     </section>
   );
 }

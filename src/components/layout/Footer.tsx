@@ -111,11 +111,25 @@ export default function Footer() {
             © {new Date().getFullYear()} O.StressKalaana · Made with 😂 &amp;
             questionable decisions.
           </p>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-cream/60">
               <span className="h-2 w-2 animate-pulse rounded-full bg-toxic" />
               Stress level: 0%
             </span>
+            <a
+              href="#/privacy"
+              data-hover="LEGAL"
+              className="text-xs font-bold uppercase tracking-wide text-cream/60 transition-colors hover:text-toxic"
+            >
+              🔒 Privacy
+            </a>
+            <a
+              href="#/terms"
+              data-hover="LEGAL"
+              className="text-xs font-bold uppercase tracking-wide text-cream/60 transition-colors hover:text-toxic"
+            >
+              📜 Terms
+            </a>
             <a
               href="#top"
               data-hover="UP!"

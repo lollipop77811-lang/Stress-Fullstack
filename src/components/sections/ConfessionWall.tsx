@@ -5,9 +5,11 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { BRICK_BG } from "@/assets/brickBg";
 import ShareButtons from "@/components/ui/ShareButtons";
+import ReportModal from "@/components/ui/ReportModal";
 import {
   listConfessions,
   witnessConfession,
+  reportConfession,
   type Confession as UserConfession,
 } from "@/lib/confessionsApi";
 
@@ -186,6 +188,30 @@ function getSessionId(): string {
   }
 }
 
+/* localStorage key for tracking which confessions the current session
+ * has reported (for the report button dedup UI). */
+const REPORTED_KEY = "osk.confessions.reported.v1";
+
+function loadReported(): Set<string> {
+  try {
+    const raw = localStorage.getItem(REPORTED_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr)) return new Set(arr.filter((x) => typeof x === "string"));
+  } catch {
+    /* ignore */
+  }
+  return new Set();
+}
+
+function saveReported(set: Set<string>) {
+  try {
+    localStorage.setItem(REPORTED_KEY, JSON.stringify([...set]));
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
  * Convert a user confession fetched from the API into a Note the wall
  * can render. Positions are assigned deterministically by hashing the
@@ -265,6 +291,10 @@ export default function ConfessionWall({
   const [witnessed, setWitnessed] = useState<Set<string>>(() => loadWitnessed());
   // Stable session ID for witness dedup on the server
   const sessionIdRef = useRef<string>(getSessionId());
+  // Set of confession IDs the current session has reported (for dedup UI)
+  const [reported, setReported] = useState<Set<string>>(() => loadReported());
+  // The note currently being reported (opens the report modal)
+  const [reportingNote, setReportingNote] = useState<Note | null>(null);
   // The note currently in flight (composer → wall). When set, a FlyingNote
   // portal is rendered; on landing it's swapped for a real wall note.
   const [flyingNote, setFlyingNote] = useState<{
@@ -451,6 +481,38 @@ export default function ConfessionWall({
             : n
         )
       );
+    }
+  }
+
+  /** Submit a report for the currently-reporting note. */
+  async function handleReportSubmit(
+    reason: "spam" | "hate" | "self-harm" | "doxxing" | "other"
+  ) {
+    if (!reportingNote) return;
+    const idStr = String(reportingNote.id);
+    if (reported.has(idStr)) return;
+
+    // Optimistic: mark as reported locally
+    const newReported = new Set(reported);
+    newReported.add(idStr);
+    setReported(newReported);
+    saveReported(newReported);
+
+    try {
+      const result = await reportConfession(idStr, sessionIdRef.current, reason);
+      // If the confession was auto-hidden, remove it from the wall
+      if (result.isHidden) {
+        setUserNotes((prev) => prev.filter((n) => String(n.id) !== idStr));
+      }
+      // Close the report modal + close the enlarge modal if open
+      setReportingNote(null);
+      if (open && String(open.id) === idStr) setOpen(null);
+    } catch (err) {
+      console.warn("[report] failed, rolling back:", err);
+      const rolledBack = new Set(reported);
+      rolledBack.delete(idStr);
+      setReported(rolledBack);
+      saveReported(rolledBack);
     }
   }
 
@@ -754,24 +816,46 @@ export default function ConfessionWall({
                       <span className="truncate text-[9px] font-bold uppercase tracking-wide opacity-60">
                         — {n.author}
                       </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleWitness(n.id);
-                        }}
-                        disabled={n.witnessed}
-                        data-hover={n.witnessed ? "SEEN" : "WITNESS"}
-                        aria-label={n.witnessed ? "Already witnessed" : "Witness this confession"}
-                        className={
-                          "shrink-0 inline-flex items-center gap-1 rounded-full border border-current px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide transition-[transform,opacity,background-color] duration-150 " +
-                          (n.witnessed
-                            ? "opacity-50 cursor-default"
-                            : "hover:scale-110 hover:bg-current/10")
-                        }
-                      >
-                        <span>👁️</span>
-                        <span className="tabular-nums">{n.witnessCount ?? 0}</span>
-                      </button>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleWitness(n.id);
+                          }}
+                          disabled={n.witnessed}
+                          data-hover={n.witnessed ? "SEEN" : "WITNESS"}
+                          aria-label={n.witnessed ? "Already witnessed" : "Witness this confession"}
+                          className={
+                            "inline-flex items-center gap-1 rounded-full border border-current px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide transition-[transform,opacity,background-color] duration-150 " +
+                            (n.witnessed
+                              ? "opacity-50 cursor-default"
+                              : "hover:scale-110 hover:bg-current/10")
+                          }
+                        >
+                          <span>👁️</span>
+                          <span className="tabular-nums">{n.witnessCount ?? 0}</span>
+                        </button>
+                        {/* Report button — only on user confessions (string id) */}
+                        {typeof n.id === "string" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setReportingNote(n);
+                            }}
+                            disabled={reported.has(String(n.id))}
+                            data-hover={reported.has(String(n.id)) ? "SENT" : "REPORT"}
+                            aria-label={reported.has(String(n.id)) ? "Already reported" : "Report this confession"}
+                            className={
+                              "inline-flex items-center gap-0.5 rounded-full border border-current px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide transition-[transform,opacity] duration-150 " +
+                              (reported.has(String(n.id))
+                                ? "opacity-30 cursor-default"
+                                : "hover:scale-110")
+                            }
+                          >
+                            🚩
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Hover hint */}
@@ -988,10 +1072,38 @@ export default function ConfessionWall({
                   />
                 </div>
               )}
+
+              {/* Report button — only on user confessions */}
+              {typeof open.id === "string" && (
+                <div className="mt-3 flex justify-end">
+                  <button
+                    onClick={() => setReportingNote(open)}
+                    disabled={reported.has(String(open.id))}
+                    data-hover={reported.has(String(open.id)) ? "SENT" : "REPORT"}
+                    className={
+                      "inline-flex items-center gap-1.5 rounded-lg border-2 border-current px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-tight transition-[transform,opacity] duration-150 " +
+                      (reported.has(String(open.id))
+                        ? "opacity-30 cursor-default"
+                        : "hover:-translate-y-0.5")
+                    }
+                  >
+                    <span>🚩</span>
+                    {reported.has(String(open.id)) ? "reported" : "report"}
+                  </button>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Report modal */}
+      <ReportModal
+        show={!!reportingNote}
+        onClose={() => setReportingNote(null)}
+        onSubmit={handleReportSubmit}
+        alreadyReported={!!reportingNote && reported.has(String(reportingNote.id))}
+      />
     </section>
   );
 }

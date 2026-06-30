@@ -66,13 +66,39 @@ const confessionSchema = new mongoose.Schema(
       default: [],
       select: false,
     },
+    /** True if the confession has been auto-hidden after REPORT_THRESHOLD
+     *  reports. Hidden confessions don't appear on walls or in featured. */
+    isHidden: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    /** Number of times this confession has been reported. */
+    reportCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    /** Array of sessionIds that have reported this confession (dedup). */
+    reportedBy: {
+      type: [String],
+      default: [],
+      select: false,
+    },
+    /** True if the confession contains crisis/self-harm language.
+     *  Stays visible (not silenced) but flagged for admin review. */
+    isFlagged: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
     ipHash: { type: String, default: null, select: false },
   },
   { timestamps: true }
 );
 
 // Index for the most common query: list confessions on a wall newest-first
-confessionSchema.index({ wallIdx: 1, isArchived: 1, createdAt: -1 });
+confessionSchema.index({ wallIdx: 1, isArchived: 1, isHidden: 1, createdAt: -1 });
 // Index for "confession of the day" — most-witnessed in last 24h
 confessionSchema.index({ witnessCount: -1, createdAt: -1 });
 
@@ -81,6 +107,7 @@ confessionSchema.statics = {
   ALLOWED_COLORS,
   ALLOWED_AGINGS,
   WALL_CAP,
+  REPORT_THRESHOLD: 3, // auto-hide after 3 reports
 };
 
 const Confession = mongoose.model("Confession", confessionSchema);

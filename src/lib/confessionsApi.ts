@@ -29,6 +29,11 @@ export type Confession = {
   /** Only returned by GET /api/mine — true if the confession has been
    *  archived off its wall (wall-cap eviction). */
   isArchived?: boolean;
+  /** True if the confession has been auto-hidden after 3 reports. */
+  isHidden?: boolean;
+  /** True if crisis/self-harm language was detected (admin-only, but
+   *  returned so the deep-link page can show a supportive notice). */
+  isFlagged?: boolean;
 };
 
 export type NewConfession = {
@@ -48,6 +53,10 @@ export type CreateResponse = {
   /** True if the confession was spawned on a different wall than requested
    *  (because the requested wall was full). */
   spawnedNewWall: boolean;
+  /** List of PII types that were stripped from the text (e.g. ["email", "phone"]). */
+  strippedPII?: string[];
+  /** True if crisis/self-harm language was detected. Triggers the crisis overlay. */
+  isFlagged?: boolean;
 };
 
 export type WallStats = {
@@ -59,6 +68,14 @@ export type WallStats = {
 export type WitnessResponse = {
   witnessed: boolean;
   witnessCount: number;
+};
+
+export type ReportResponse = {
+  reported: boolean;
+  reportCount: number;
+  isHidden: boolean;
+  reason: string;
+  message?: string;
 };
 
 /**
@@ -215,6 +232,23 @@ export async function witnessConfession(
     body: JSON.stringify({ sessionId }),
   });
   return handle<WitnessResponse>(res);
+}
+
+/**
+ * Report a confession. After 3 reports from distinct sessions, the
+ * confession is auto-hidden. Dedup: one report per sessionId.
+ */
+export async function reportConfession(
+  id: string,
+  sessionId: string,
+  reason: "spam" | "hate" | "self-harm" | "doxxing" | "other"
+): Promise<ReportResponse> {
+  const res = await fetch(`${API_URL}/confessions/${id}/report`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ sessionId, reason }),
+  });
+  return handle<ReportResponse>(res);
 }
 
 /**

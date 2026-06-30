@@ -11,6 +11,11 @@ import Confession, {
   ALLOWED_AGINGS,
   WALL_CAP,
 } from "./confessionModel.js";
+import {
+  sanitizePII,
+  detectCrisis,
+  filterProfanity,
+} from "./safetyUtils.js";
 
 const router = Router();
 
@@ -121,6 +126,7 @@ router.get("/confessions/featured", async (_req, res) => {
     let doc = await Confession.findOne({
       createdAt: { $gte: oneDayAgo },
       isArchived: false,
+      isHidden: false,
     })
       .sort({ witnessCount: -1, createdAt: -1 })
       .lean()
@@ -128,7 +134,7 @@ router.get("/confessions/featured", async (_req, res) => {
 
     // Fallback: most-witnessed confession ever (any time)
     if (!doc) {
-      doc = await Confession.findOne({ isArchived: false })
+      doc = await Confession.findOne({ isArchived: false, isHidden: false })
         .sort({ witnessCount: -1, createdAt: -1 })
         .lean()
         .exec();
@@ -255,6 +261,80 @@ router.get("/confessions/:id", async (req, res) => {
 });
 
 /**
+ * POST /api/confessions/:id/report
+ * Reports a confession. After REPORT_THRESHOLD (3) reports from distinct
+ * sessions, the confession is auto-hidden (isHidden: true) — it stops
+ * appearing on walls and in featured, but stays in the DB for admin review.
+ *
+ * Dedup: one report per sessionId per confession.
+ * Rate-limited: 10 reports per minute per IP (anti-abuse).
+ *
+ * Body: { sessionId: string, reason: "spam"|"hate"|"self-harm"|"doxxing"|"other" }
+ */
+const reportLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "slow down. too many reports too fast." },
+});
+
+const REPORT_THRESHOLD = 3;
+
+router.post("/confessions/:id/report", reportLimiter, async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ error: "invalid confession id" });
+  }
+
+  const sessionId = String(req.body?.sessionId || "").slice(0, 64);
+  if (!sessionId) {
+    return res.status(400).json({ error: "sessionId is required" });
+  }
+
+  const validReasons = ["spam", "hate", "self-harm", "doxxing", "other"];
+  const reason = validReasons.includes(req.body?.reason) ? req.body.reason : "other";
+
+  try {
+    const doc = await Confession.findById(id).exec();
+    if (!doc) {
+      return res.status(404).json({ error: "confession not found" });
+    }
+
+    // Dedup check
+    if (!Array.isArray(doc.reportedBy)) doc.reportedBy = [];
+    if (doc.reportedBy.includes(sessionId)) {
+      return res.json({
+        reported: false,
+        reportCount: doc.reportCount ?? 0,
+        isHidden: doc.isHidden,
+        message: "you've already reported this confession",
+      });
+    }
+
+    doc.reportedBy.push(sessionId);
+    doc.reportCount = (doc.reportCount ?? 0) + 1;
+
+    // Auto-hide at threshold
+    if (doc.reportCount >= REPORT_THRESHOLD && !doc.isHidden) {
+      doc.isHidden = true;
+    }
+
+    await doc.save();
+
+    return res.json({
+      reported: true,
+      reportCount: doc.reportCount,
+      isHidden: doc.isHidden,
+      reason,
+    });
+  } catch (err) {
+    console.error("[report] error:", err);
+    return res.status(500).json({ error: "failed to report confession" });
+  }
+});
+
+/**
  * GET /api/walls/:wallIdx/confessions
  * Returns all non-archived confessions for the given wall, newest first.
  * wallIdx can be any non-negative integer (walls are infinite).
@@ -272,6 +352,7 @@ router.get("/walls/:wallIdx/confessions", async (req, res) => {
     const confessions = await Confession.find({
       wallIdx,
       isArchived: false,
+      isHidden: false,
     })
       .sort({ createdAt: -1 })
       .lean({ virtuals: true })
@@ -343,6 +424,21 @@ router.post("/confessions", postLimiter, async (req, res) => {
       : "anon";
 
   try {
+    // --- SAFETY PIPELINE ---
+    // 1. Strip PII (emails, phones, URLs, credit cards, SSN-like patterns)
+    const { sanitized: piiStripped, stripped: strippedTypes } = sanitizePII(text.trim());
+    // 2. Filter profanity (server-side backstop; client also runs bad-words)
+    const profanityFiltered = filterProfanity(piiStripped);
+    // 3. Detect crisis language (sets isFlagged for admin review)
+    const isCrisis = detectCrisis(profanityFiltered);
+
+    // Re-validate length after sanitization (PII stripping may have shortened it)
+    if (profanityFiltered.length < 3) {
+      return res.status(400).json({
+        error: "after removing private info, the confession is too short. please add more.",
+      });
+    }
+
     // Find the actual wall to post on: starting from the requested wallIdx,
     // find the first wall that isn't full. This enables auto-spawning.
     let actualWallIdx = requestedWallIdx;
@@ -351,23 +447,27 @@ router.post("/confessions", postLimiter, async (req, res) => {
       const count = await Confession.countDocuments({
         wallIdx: actualWallIdx,
         isArchived: false,
+        isHidden: false,
       });
       if (count < WALL_CAP) break;
       actualWallIdx++;
     }
 
     const created = await Confession.create({
-      text: text.trim(),
+      text: profanityFiltered,
       author: safeAuthor,
       color,
       aging,
       wallIdx: actualWallIdx,
       isArchived: false,
+      isHidden: false,
+      isFlagged: isCrisis,
     });
 
     const wallCount = await Confession.countDocuments({
       wallIdx: actualWallIdx,
       isArchived: false,
+      isHidden: false,
     });
 
     return res.status(201).json({
@@ -385,6 +485,9 @@ router.post("/confessions", postLimiter, async (req, res) => {
       wallCount,
       wallCap: WALL_CAP,
       spawnedNewWall: actualWallIdx !== requestedWallIdx,
+      // Safety metadata for the client
+      strippedPII: strippedTypes, // e.g. ["email", "phone"]
+      isFlagged: isCrisis, // true if crisis language detected
     });
   } catch (err) {
     console.error("[confessions] create error:", err);

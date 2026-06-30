@@ -29,7 +29,9 @@ export type Route =
   | "wall"
   | "mine"
   | "horoscope"
-  | "confession";
+  | "confession"
+  | "privacy"
+  | "terms";
 
 export type RouteState = {
   route: Route;
@@ -50,6 +52,10 @@ function parse(): RouteState {
     return { route: "mine", wallDisplayN: null, confessionId: null };
   if (h.startsWith("#/horoscope"))
     return { route: "horoscope", wallDisplayN: null, confessionId: null };
+  if (h.startsWith("#/privacy"))
+    return { route: "privacy", wallDisplayN: null, confessionId: null };
+  if (h.startsWith("#/terms"))
+    return { route: "terms", wallDisplayN: null, confessionId: null };
   if (h.startsWith("#/c/")) {
     const id = h.slice("#/c/".length).trim();
     if (id)
@@ -84,7 +90,9 @@ export function useHashRoute(): RouteState {
       state.route === "wall" ||
       state.route === "mine" ||
       state.route === "horoscope" ||
-      state.route === "confession"
+      state.route === "confession" ||
+      state.route === "privacy" ||
+      state.route === "terms"
     ) {
       window.scrollTo(0, 0);
     }
