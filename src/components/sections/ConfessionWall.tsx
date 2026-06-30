@@ -6,6 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { BRICK_BG } from "@/assets/brickBg";
 import ShareButtons from "@/components/ui/ShareButtons";
 import ReportModal from "@/components/ui/ReportModal";
+import CommentThread from "@/components/ui/CommentThread";
 import {
   listConfessions,
   witnessConfession,
@@ -1071,6 +1072,11 @@ export default function ConfessionWall({
                     id={open.id}
                   />
                 </div>
+              )}
+
+              {/* Comment thread — only on user confessions */}
+              {typeof open.id === "string" && (
+                <CommentThread confessionId={open.id} commentsEnabled={true} />
               )}
 
               {/* Report button — only on user confessions */}

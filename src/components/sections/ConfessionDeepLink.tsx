@@ -4,6 +4,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Stamp from "@/components/ui/Stamp";
 import ShareButtons from "@/components/ui/ShareButtons";
+import CommentThread from "@/components/ui/CommentThread";
 import { getConfessionById, type Confession } from "@/lib/confessionsApi";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -273,6 +274,12 @@ function ConfessionCard({
             id={confession.id}
           />
         </div>
+
+        {/* Comment thread */}
+        <CommentThread
+          confessionId={confession.id}
+          commentsEnabled={true}
+        />
       </motion.div>
 
       {/* Floating stamp */}

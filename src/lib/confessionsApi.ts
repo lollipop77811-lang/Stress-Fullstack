@@ -42,6 +42,7 @@ export type NewConfession = {
   color: ConfessionColor;
   aging: ConfessionAging;
   wallIdx: number;
+  commentsEnabled?: boolean;
 };
 
 export type CreateResponse = {
@@ -76,6 +77,24 @@ export type ReportResponse = {
   isHidden: boolean;
   reason: string;
   message?: string;
+};
+
+/* ---------- Comments ---------- */
+
+export type Comment = {
+  id: string;
+  text: string;
+  author: string;
+  parentId: string | null;
+  createdAt: string;
+  replies?: Comment[];
+};
+
+export type CommentListResponse = {
+  count: number;
+  cap: number;
+  commentsEnabled: boolean;
+  comments: Comment[];
 };
 
 /**
@@ -275,6 +294,57 @@ export async function pingBackend(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/* ---------- Comment API ---------- */
+
+/**
+ * Fetch all comments for a confession (threaded, 2 levels max).
+ * Returns empty array if comments are disabled or confession not found.
+ */
+export async function listComments(
+  confessionId: string
+): Promise<CommentListResponse> {
+  try {
+    const res = await fetch(`${API_URL}/confessions/${confessionId}/comments`, {
+      headers: { Accept: "application/json" },
+    });
+    return await handle<CommentListResponse>(res);
+  } catch (err) {
+    console.warn("[confessionsApi] listComments failed:", err);
+    return { count: 0, cap: 50, commentsEnabled: false, comments: [] };
+  }
+}
+
+/**
+ * Create a comment on a confession. Throws on error.
+ * Rate-limited: 1 per 60s per IP.
+ */
+export async function createComment(
+  confessionId: string,
+  payload: { text: string; author?: string; parentId?: string | null }
+): Promise<{ comment: Comment }> {
+  const res = await fetch(`${API_URL}/confessions/${confessionId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return handle<{ comment: Comment }>(res);
+}
+
+/**
+ * Report a comment. Auto-hides after 3 reports.
+ */
+export async function reportComment(
+  commentId: string,
+  sessionId: string
+): Promise<ReportResponse> {
+  const res = await fetch(`${API_URL}/comments/${commentId}/report`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ sessionId }),
+  });
+  return handle<ReportResponse>(res);
 }
 
 export { API_URL };

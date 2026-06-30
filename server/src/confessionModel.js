@@ -92,6 +92,20 @@ const confessionSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    /** Whether comments are allowed on this confession. Author can
+     *  toggle this off when posting (default: true). Once disabled,
+     *  it stays disabled (one-way lock). */
+    commentsEnabled: {
+      type: Boolean,
+      default: true,
+    },
+    /** Denormalized comment count for fast display. Incremented by
+     *  the comment routes when a comment is created. */
+    commentCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     ipHash: { type: String, default: null, select: false },
   },
   { timestamps: true }

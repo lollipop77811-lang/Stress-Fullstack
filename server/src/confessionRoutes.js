@@ -393,7 +393,7 @@ router.get("/walls/:wallIdx/confessions", async (req, res) => {
  * may differ from the requested wallIdx if the original was full).
  */
 router.post("/confessions", postLimiter, async (req, res) => {
-  const { text, author, color, aging, wallIdx } = req.body ?? {};
+  const { text, author, color, aging, wallIdx, commentsEnabled } = req.body ?? {};
 
   // --- validation ---
   if (typeof text !== "string" || text.trim().length < 3) {
@@ -462,6 +462,8 @@ router.post("/confessions", postLimiter, async (req, res) => {
       isArchived: false,
       isHidden: false,
       isFlagged: isCrisis,
+      commentsEnabled: commentsEnabled !== false, // default true
+      commentCount: 0,
     });
 
     const wallCount = await Confession.countDocuments({

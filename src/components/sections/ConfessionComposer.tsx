@@ -66,6 +66,7 @@ export default function ConfessionComposer({ wallIdx, onSubmitted }: Props) {
   const [author, setAuthor] = useState("");
   const [color, setColor] = useState<ConfessionColor>("yellow");
   const [aging, setAging] = useState<ConfessionAging>("fresh");
+  const [commentsEnabled, setCommentsEnabled] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ kind: "ok" | "err"; msg: string } | null>(null);
   const [showCrisis, setShowCrisis] = useState(false);
@@ -100,6 +101,7 @@ export default function ConfessionComposer({ wallIdx, onSubmitted }: Props) {
         color,
         aging,
         wallIdx,
+        commentsEnabled,
       });
       onSubmitted(result.confession);
       // Reset
@@ -296,6 +298,28 @@ export default function ConfessionComposer({ wallIdx, onSubmitted }: Props) {
                 data-hover="NAME"
                 className="w-full rounded-xl border-2 border-jet bg-cream/80 px-4 py-2.5 font-body text-sm font-semibold text-jet shadow-[3px_3px_0_#0b0c10] outline-none placeholder:text-jet/40 focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-[transform,box-shadow] duration-150"
               />
+            </div>
+
+            {/* Comments toggle */}
+            <div className="mt-4 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setCommentsEnabled((v) => !v)}
+                className={cn(
+                  "relative h-7 w-12 rounded-full border-2 border-jet transition-colors duration-200",
+                  commentsEnabled ? "bg-toxic" : "bg-paper"
+                )}
+                aria-label={commentsEnabled ? "Comments enabled" : "Comments disabled"}
+              >
+                <motion.span
+                  animate={{ x: commentsEnabled ? 22 : 2 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                  className="absolute top-0.5 h-5 w-5 rounded-full border-2 border-jet bg-cream"
+                />
+              </button>
+              <span className="font-display text-xs font-extrabold uppercase tracking-tight text-ink/70">
+                💬 {commentsEnabled ? "allow comments" : "comments disabled"}
+              </span>
             </div>
 
             {/* Submit + meta */}
