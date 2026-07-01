@@ -107,16 +107,16 @@ export default function Hero() {
         <div className="absolute right-10 top-10 h-72 w-72 rounded-full bg-electric/20 blur-3xl" />
       </div>
 
-      <div className="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-12">
+      <div className="mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-12 lg:gap-10">
         {/* Left: copy */}
-        <div className="relative lg:col-span-7">
-          <motion.div className="hero-fade inline-flex items-center gap-2 rounded-full border-2 border-jet bg-cream px-4 py-1.5 text-xs font-bold shadow-brutal-sm">
+        <div className="relative order-2 lg:order-1 lg:col-span-7">
+          <motion.div className="hero-fade inline-flex items-center gap-2 rounded-full border-2 border-jet bg-cream px-3 py-1.5 text-[10px] font-bold shadow-brutal-sm sm:px-4 sm:text-xs">
             <span className="animate-wiggle">⚠️</span>
             HUMOR · MEMES · SATIRE · STRESS-RELIEF
           </motion.div>
 
-          <h1 className="mt-6 font-display font-extrabold uppercase leading-[0.86] tracking-tight">
-            <span className="block text-[15vw] sm:text-[12vw] lg:text-[8.5rem]">
+          <h1 className="mt-4 font-display font-extrabold uppercase leading-[0.86] tracking-tight sm:mt-6">
+            <span className="block text-[14vw] sm:text-[12vw] lg:text-[8.5rem]">
               {headline.slice(0, 2).map((w, i) => (
                 <span
                   key={w.text}
@@ -127,7 +127,7 @@ export default function Hero() {
                 </span>
               ))}
             </span>
-            <span className="mt-2 block text-[15vw] sm:text-[12vw] lg:text-[8.5rem]">
+            <span className="mt-1 block text-[14vw] sm:text-[12vw] lg:text-[8.5rem] sm:mt-2">
               <span
                 className={`hero-word inline-block ${headline[2].className}`}
               >
@@ -137,18 +137,18 @@ export default function Hero() {
           </h1>
 
           {/* Caveat annotation */}
-          <span className="hero-fade mt-3 inline-block rotate-[-4deg] font-hand text-2xl font-bold text-electric sm:text-3xl">
+          <span className="hero-fade mt-2 inline-block rotate-[-4deg] font-hand text-xl font-bold text-electric sm:mt-3 sm:text-2xl lg:text-3xl">
             ↳ aka: killing the stress (duh)
           </span>
 
-          <p className="hero-fade mt-6 max-w-xl font-body text-base text-ink sm:text-lg">
+          <p className="hero-fade mt-4 max-w-xl font-body text-sm text-ink sm:mt-6 sm:text-base lg:text-lg">
             We murder stress for a living.{" "}
             <span className="bg-toxic px-1 font-semibold">Legally.</span>{" "}
             (Probably.) A humor &amp; satire platform engineered to melt your
             worries into uncontrollable, slightly suspicious joy.
           </p>
 
-          <div className="hero-fade mt-8 flex flex-wrap items-center gap-4">
+          <div className="hero-fade mt-6 flex flex-wrap items-center gap-3 sm:mt-8 sm:gap-4">
             <Button href="#bento" variant="electric" size="lg">
               Get your daily dose
               <span className="text-lg">↓</span>
@@ -158,17 +158,17 @@ export default function Hero() {
             </Button>
           </div>
 
-          <div className="hero-fade mt-10 flex flex-wrap gap-x-8 gap-y-3">
+          <div className="hero-fade mt-8 flex flex-wrap gap-x-6 gap-y-3 sm:mt-10 sm:gap-x-8">
             {[
               ["0%", "Stress"],
               ["100%", "Vibes"],
               ["∞", "Laughs served"],
             ].map(([n, l]) => (
               <div key={l} className="flex flex-col">
-                <span className="font-display text-3xl font-extrabold leading-none">
+                <span className="font-display text-2xl font-extrabold leading-none sm:text-3xl">
                   {n}
                 </span>
-                <span className="text-xs font-bold uppercase tracking-wide text-ink/70">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-ink/70 sm:text-xs">
                   {l}
                 </span>
               </div>
@@ -177,8 +177,8 @@ export default function Hero() {
         </div>
 
         {/* Right: mascot + floating bits */}
-        <div className="relative lg:col-span-5">
-          <div className="hero-parallax-up relative mx-auto max-w-md">
+        <div className="relative order-1 lg:order-2 lg:col-span-5">
+          <div className="hero-parallax-up relative mx-auto max-w-xs sm:max-w-md">
             <Floating depth={14} className="relative">
               <div className="relative rounded-[2rem] border-[3px] border-jet bg-electric p-3 shadow-brutal-xl">
                 <div className="aspect-[4/5] overflow-hidden rounded-[1.5rem] border-2 border-jet bg-cream">
@@ -196,7 +196,7 @@ export default function Hero() {
             </Floating>
 
             {/* Floating stamps & emoji */}
-            <Floating depth={26} className="absolute -right-6 -top-8 sm:-right-10">
+            <Floating depth={26} className="absolute -right-4 -top-6 hidden sm:block sm:-right-10 sm:-top-8">
               <Stamp
                 text="· LMAO CERTIFIED · OFFICIAL"
                 center="😂"
@@ -205,7 +205,7 @@ export default function Hero() {
               />
             </Floating>
 
-            <Floating depth={20} rotate={-8} className="absolute -bottom-8 -left-6 sm:-left-12">
+            <Floating depth={20} rotate={-8} className="absolute -bottom-6 -left-4 hidden sm:block sm:-bottom-8 sm:-left-12">
               <div className="rounded-2xl border-2 border-jet bg-pink px-4 py-3 text-center shadow-brutal">
                 <div className="font-display text-2xl font-extrabold text-cream leading-none">
                   0% Stress
@@ -226,7 +226,7 @@ export default function Hero() {
       </div>
 
       {/* Scroll cue */}
-      <div className="hero-fade mt-16 flex items-center justify-center">
+      <div className="hero-fade mt-10 flex items-center justify-center sm:mt-16">
         <span className="flex items-center gap-2 font-hand text-xl font-bold text-ink/70">
           keep scrollin', keep lol'in
           <motion.span

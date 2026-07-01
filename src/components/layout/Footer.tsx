@@ -1,25 +1,5 @@
 import Marquee from "@/components/ui/Marquee";
 
-const COLUMNS = [
-  {
-    title: "Explore",
-    hover: "GO",
-    links: ["Home", "Memes", "The Hot Take", "Daily Feed", "Newsletter"],
-  },
-  {
-    title: "Topics",
-    hover: "LOL",
-    links: ["Workplace", "Wellness", "Relationships", "Procrastination", "Cats"],
-  },
-  {
-    title: "Serious Stuff",
-    hover: "ZZZ",
-    links: ["About", "Contact", "Privacy (lol)", "Terms", "Cookie Policy"],
-  },
-];
-
-const SOCIALS = ["Instagram", "TikTok", "X / Twitter", "YouTube"];
-
 export default function Footer() {
   return (
     <footer className="relative mt-10 overflow-hidden border-t-[3px] border-jet bg-jet text-cream">
@@ -38,10 +18,10 @@ export default function Footer() {
         </Marquee>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
-        <div className="grid gap-12 lg:grid-cols-12">
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-12">
           {/* Brand */}
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-7">
             <a
               href="#top"
               data-hover="TOP!"
@@ -55,85 +35,53 @@ export default function Footer() {
                 <span className="text-electric">Kalaana</span>
               </span>
             </a>
-            <p className="mt-5 max-w-sm font-body text-cream/70">
+            <p className="mt-5 max-w-sm font-body text-sm leading-relaxed text-cream/70 sm:text-base">
               Killing the stress, one laugh at a time. A humor, meme &amp;
               satire platform engineered to make your worries look ridiculous.
               You're welcome.
             </p>
-
-            <div className="mt-6 flex flex-wrap gap-2">
-              {SOCIALS.map((s) => (
-                <a
-                  key={s}
-                  href="#newsletter"
-                  data-hover="FOLLOW"
-                  className="rounded-lg border-2 border-cream/30 px-3 py-2 text-xs font-bold uppercase tracking-wide transition-colors hover:border-toxic hover:bg-toxic hover:text-jet"
-                >
-                  {s}
-                </a>
-              ))}
-            </div>
           </div>
 
-          {/* Link columns */}
-          {COLUMNS.map((col) => (
-            <div key={col.title} className="lg:col-span-2">
-              <h3 className="font-display text-sm font-extrabold uppercase tracking-widest text-toxic">
-                {col.title}
+          {/* Quick links */}
+          <div className="flex flex-wrap gap-x-8 gap-y-3 lg:col-span-5 lg:justify-end">
+            <div>
+              <h3 className="font-display text-xs font-extrabold uppercase tracking-widest text-toxic">
+                Explore
               </h3>
-              <ul className="mt-4 space-y-2.5">
-                {col.links.map((l) => (
-                  <li key={l}>
-                    <a
-                      href="#top"
-                      data-hover={col.hover}
-                      className="font-body text-sm font-medium text-cream/80 transition-colors hover:text-pink"
-                    >
-                      {l}
-                    </a>
-                  </li>
-                ))}
+              <ul className="mt-3 space-y-2">
+                <li><a href="#/wall" data-hover="WALL" className="text-sm font-medium text-cream/70 transition-colors hover:text-pink">Wall of Confession</a></li>
+                <li><a href="#/whisper" data-hover="SHHH" className="text-sm font-medium text-cream/70 transition-colors hover:text-pink">Whisper Wall</a></li>
+                <li><a href="#/horoscope" data-hover="🔮" className="text-sm font-medium text-cream/70 transition-colors hover:text-pink">Daily Horoscope</a></li>
+                <li><a href="#/mine" data-hover="MINE" className="text-sm font-medium text-cream/70 transition-colors hover:text-pink">My Confessions</a></li>
               </ul>
             </div>
-          ))}
-        </div>
-
-        {/* Giant outline type */}
-        <div className="mt-14 select-none">
-          <h2 className="text-stroke-cream text-center font-display text-[19vw] font-extrabold uppercase leading-[0.8] tracking-tighter">
-            Laugh More
-          </h2>
+            <div>
+              <h3 className="font-display text-xs font-extrabold uppercase tracking-widest text-toxic">
+                Legal
+              </h3>
+              <ul className="mt-3 space-y-2">
+                <li><a href="#/privacy" data-hover="LEGAL" className="text-sm font-medium text-cream/70 transition-colors hover:text-pink">Privacy Policy</a></li>
+                <li><a href="#/terms" data-hover="LEGAL" className="text-sm font-medium text-cream/70 transition-colors hover:text-pink">Terms of Service</a></li>
+              </ul>
+            </div>
+          </div>
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-cream/20 pt-6 text-center sm:flex-row sm:text-left">
+        <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-cream/20 pt-6 text-center sm:flex-row sm:text-left">
           <p className="text-xs font-semibold uppercase tracking-wide text-cream/60">
             © {new Date().getFullYear()} O.StressKalaana · Made with 😂 &amp;
             questionable decisions.
           </p>
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-4">
             <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-cream/60">
               <span className="h-2 w-2 animate-pulse rounded-full bg-toxic" />
               Stress level: 0%
             </span>
             <a
-              href="#/privacy"
-              data-hover="LEGAL"
-              className="text-xs font-bold uppercase tracking-wide text-cream/60 transition-colors hover:text-toxic"
-            >
-              🔒 Privacy
-            </a>
-            <a
-              href="#/terms"
-              data-hover="LEGAL"
-              className="text-xs font-bold uppercase tracking-wide text-cream/60 transition-colors hover:text-toxic"
-            >
-              📜 Terms
-            </a>
-            <a
               href="#top"
               data-hover="UP!"
-              className="rounded-lg border-2 border-cream/30 px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors hover:bg-toxic hover:text-jet"
+              className="rounded-lg border-2 border-cream/30 px-3 py-2 text-xs font-bold uppercase tracking-wide transition-colors hover:bg-toxic hover:text-jet"
             >
               Back to top ↑
             </a>
