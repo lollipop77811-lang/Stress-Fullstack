@@ -20,6 +20,31 @@ import { firebaseAuth, firebaseInitialized } from "./firebaseAdmin.js";
 
 const router = Router();
 
+/**
+ * Generate a random username for Google signups.
+ * Format: "stressball_" + 4 random alphanumeric chars (e.g. "stressball_7k2x")
+ * Checks the DB for uniqueness and retries up to 10 times.
+ */
+async function generateUsername() {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  for (let attempt = 0; attempt < 10; attempt++) {
+    let suffix = "";
+    for (let i = 0; i < 4; i++) {
+      suffix += chars[Math.floor(Math.random() * chars.length)];
+    }
+    const candidate = `stressball_${suffix}`;
+    // Check if it's taken
+    const existing = await Account.findOne({
+      username: { $regex: new RegExp(`^${candidate}$`, "i") },
+    }).lean();
+    if (!existing && !RESERVED_USERNAMES.includes(candidate.toLowerCase())) {
+      return candidate;
+    }
+  }
+  // Fallback: add a timestamp
+  return `stressball_${Date.now().toString(36).slice(-6)}`;
+}
+
 // Rate limits
 const authLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -134,30 +159,31 @@ router.post("/auth/verify", authLimiter, async (req, res) => {
       });
     }
 
-    // New account — validate username
-    if (!username || typeof username !== "string") {
-      return res.status(400).json({ error: "username is required for new accounts" });
-    }
-
-    const cleanUsername = username.trim();
-    if (cleanUsername.length < USERNAME_MIN || cleanUsername.length > USERNAME_MAX) {
-      return res.status(400).json({
-        error: `username must be ${USERNAME_MIN}-${USERNAME_MAX} characters`,
-      });
-    }
-    if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
-      return res.status(400).json({
-        error: "username can only contain letters, numbers, and underscores",
-      });
-    }
-    if (RESERVED_USERNAMES.includes(cleanUsername.toLowerCase())) {
-      return res.status(400).json({ error: "that username is reserved. try another." });
-    }
-
-    // Check username availability
-    const existingUsername = await Account.findOne({ username: { $regex: new RegExp(`^${cleanUsername}$`, "i") } });
-    if (existingUsername) {
-      return res.status(409).json({ error: "that username is taken. try another." });
+    // New account — username handling
+    let cleanUsername;
+    if (username && typeof username === "string" && username.trim().length > 0) {
+      // Username provided (email signup) — validate it
+      cleanUsername = username.trim();
+      if (cleanUsername.length < USERNAME_MIN || cleanUsername.length > USERNAME_MAX) {
+        return res.status(400).json({
+          error: `username must be ${USERNAME_MIN}-${USERNAME_MAX} characters`,
+        });
+      }
+      if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
+        return res.status(400).json({
+          error: "username can only contain letters, numbers, and underscores",
+        });
+      }
+      if (RESERVED_USERNAMES.includes(cleanUsername.toLowerCase())) {
+        return res.status(400).json({ error: "that username is reserved. try another." });
+      }
+      const existingUsername = await Account.findOne({ username: { $regex: new RegExp(`^${cleanUsername}$`, "i") } });
+      if (existingUsername) {
+        return res.status(409).json({ error: "that username is taken. try another." });
+      }
+    } else {
+      // No username provided (Google signup) — auto-generate one
+      cleanUsername = generateUsername();
     }
 
     // Create account
@@ -328,6 +354,65 @@ router.delete("/account", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("[account/delete] error:", err);
     return res.status(500).json({ error: "failed to delete account" });
+  }
+});
+
+/**
+ * PUT /api/account/username
+ * Changes the user's username.
+ *
+ * Headers: Authorization: Bearer <token>
+ * Body: { username: string }
+ */
+router.put("/account/username", requireAuth, async (req, res) => {
+  const { username } = req.body ?? {};
+  if (!username || typeof username !== "string") {
+    return res.status(400).json({ error: "username is required" });
+  }
+
+  const cleanUsername = username.trim();
+  if (cleanUsername.length < USERNAME_MIN || cleanUsername.length > USERNAME_MAX) {
+    return res.status(400).json({
+      error: `username must be ${USERNAME_MIN}-${USERNAME_MAX} characters`,
+    });
+  }
+  if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
+    return res.status(400).json({
+      error: "username can only contain letters, numbers, and underscores",
+    });
+  }
+  if (RESERVED_USERNAMES.includes(cleanUsername.toLowerCase())) {
+    return res.status(400).json({ error: "that username is reserved." });
+  }
+
+  try {
+    // Check if username is taken by someone else
+    const existing = await Account.findOne({
+      username: { $regex: new RegExp(`^${cleanUsername}$`, "i") },
+      firebaseUid: { $ne: req.firebaseUser.uid },
+    }).lean();
+
+    if (existing) {
+      return res.status(409).json({ error: "that username is taken." });
+    }
+
+    const account = await Account.findOneAndUpdate(
+      { firebaseUid: req.firebaseUser.uid },
+      { username: cleanUsername },
+      { new: true }
+    ).lean();
+
+    if (!account) {
+      return res.status(404).json({ error: "account not found" });
+    }
+
+    return res.json({
+      username: account.username,
+      message: "username updated.",
+    });
+  } catch (err) {
+    console.error("[account/username] error:", err);
+    return res.status(500).json({ error: "failed to update username" });
   }
 });
 
