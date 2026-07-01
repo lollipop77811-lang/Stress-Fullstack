@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/utils/cn";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,6 +22,34 @@ export default function AuthModal({
   const [localError, setLocalError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Clear all form fields + state when modal is closed or opened
+  const clearForm = () => {
+    setEmail("");
+    setPassword("");
+    setUsername("");
+    setUsernameAvailable(null);
+    setLocalError(null);
+    setSuccessMsg(null);
+  };
+
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!show) {
+      clearForm();
+      setMode("signup");
+    }
+  }, [show]);
+
+  // Switch mode helper — clears fields on each switch
+  const switchMode = (newMode: Mode) => {
+    setMode(newMode);
+    setLocalError(null);
+    setSuccessMsg(null);
+    setPassword("");
+    setUsername("");
+    setUsernameAvailable(null);
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -243,17 +271,17 @@ export default function AuthModal({
             {/* Mode switcher */}
             <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-center">
               {mode !== "signup" && (
-                <button onClick={() => { setMode("signup"); setLocalError(null); setSuccessMsg(null); }} className="text-xs font-bold uppercase tracking-wide text-electric hover:underline">
+                <button onClick={() => switchMode("signup")} className="text-xs font-bold uppercase tracking-wide text-electric hover:underline">
                   Create account
                 </button>
               )}
               {mode !== "login" && (
-                <button onClick={() => { setMode("login"); setLocalError(null); setSuccessMsg(null); }} className="text-xs font-bold uppercase tracking-wide text-electric hover:underline">
+                <button onClick={() => switchMode("login")} className="text-xs font-bold uppercase tracking-wide text-electric hover:underline">
                   Sign in
                 </button>
               )}
               {mode !== "reset" && (
-                <button onClick={() => { setMode("reset"); setLocalError(null); setSuccessMsg(null); }} className="text-xs font-bold uppercase tracking-wide text-pink hover:underline">
+                <button onClick={() => switchMode("reset")} className="text-xs font-bold uppercase tracking-wide text-pink hover:underline">
                   Forgot password?
                 </button>
               )}
