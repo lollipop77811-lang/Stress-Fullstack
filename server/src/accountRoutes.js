@@ -183,7 +183,7 @@ router.post("/auth/verify", authLimiter, async (req, res) => {
       }
     } else {
       // No username provided (Google signup) — auto-generate one
-      cleanUsername = generateUsername();
+      cleanUsername = await generateUsername();
     }
 
     // Create account
