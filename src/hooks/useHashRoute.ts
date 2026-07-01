@@ -31,7 +31,8 @@ export type Route =
   | "horoscope"
   | "confession"
   | "privacy"
-  | "terms";
+  | "terms"
+  | "account";
 
 export type RouteState = {
   route: Route;
@@ -56,6 +57,8 @@ function parse(): RouteState {
     return { route: "privacy", wallDisplayN: null, confessionId: null };
   if (h.startsWith("#/terms"))
     return { route: "terms", wallDisplayN: null, confessionId: null };
+  if (h.startsWith("#/account"))
+    return { route: "account", wallDisplayN: null, confessionId: null };
   if (h.startsWith("#/c/")) {
     const id = h.slice("#/c/".length).trim();
     if (id)
