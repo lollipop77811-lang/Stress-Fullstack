@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "seed": "npm --prefix server run seed",
     "install:all": "npm install && npm --prefix server install"
-  },
+  }, 
   "dependencies": {
     "bad-words": "^4.0.0",
     "clsx": "2.1.1",
