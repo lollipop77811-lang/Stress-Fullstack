@@ -36,6 +36,37 @@ export type AuthState = {
 
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "/api";
 
+/**
+ * Convert raw Firebase error messages into clean, user-friendly text.
+ * Firebase errors look like: "Firebase: Error (auth/email-already-in-use)."
+ * We map them to: "email is already in use."
+ */
+function cleanFirebaseError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : "something went wrong.";
+
+  const map: Record<string, string> = {
+    "auth/email-already-in-use": "email is already in use.",
+    "auth/invalid-email": "that email address is invalid.",
+    "auth/weak-password": "password should be at least 6 characters.",
+    "auth/wrong-password": "incorrect password.",
+    "auth/user-not-found": "no account found with that email.",
+    "auth/invalid-credential": "incorrect email or password.",
+    "auth/too-many-requests": "too many attempts. try again in a minute.",
+    "auth/popup-closed-by-user": "sign-in popup was closed.",
+    "auth/cancelled-popup-request": "sign-in was cancelled.",
+    "auth/network-request-failed": "network error. check your connection.",
+    "auth/popup-blocked": "popup was blocked by your browser. allow popups and try again.",
+    "auth/operation-not-allowed": "this sign-in method is not enabled.",
+    "auth/email-not-verified": "please verify your email first.",
+  };
+
+  for (const [code, msg] of Object.entries(map)) {
+    if (raw.includes(code)) return msg;
+  }
+
+  return raw;
+}
+
 async function verifyAccount(idToken: string, username?: string): Promise<AccountData> {
   const res = await fetch(`${API_URL}/auth/verify`, {
     method: "POST",
@@ -160,9 +191,9 @@ export function useAuth() {
         setState({ user: cred.user, account, loading: false, error: null });
         return account;
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "signup failed";
+        const msg = cleanFirebaseError(err);
         setState((s) => ({ ...s, loading: false, error: msg }));
-        throw err;
+        throw new Error(msg);
       }
     },
     []
@@ -182,9 +213,9 @@ export function useAuth() {
       setState({ user: cred.user, account, loading: false, error: null });
       return account;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "login failed";
+      const msg = cleanFirebaseError(err);
       setState((s) => ({ ...s, loading: false, error: msg }));
-      throw err;
+      throw new Error(msg);
     }
   }, []);
 
@@ -202,9 +233,9 @@ export function useAuth() {
       setState({ user: cred.user, account, loading: false, error: null });
       return account;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Google sign-in failed";
+      const msg = cleanFirebaseError(err);
       setState((s) => ({ ...s, loading: false, error: msg }));
-      throw err;
+      throw new Error(msg);
     }
   }, []);
 
