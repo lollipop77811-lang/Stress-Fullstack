@@ -5,14 +5,15 @@
   "description": "O Stress Kalaana — fullstack (React frontend + Express/MongoDB backend) for the Wall of Confession.",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n frontend,backend -c cyan,magenta \"npm:dev:frontend\" \"npm:dev:backend\"",
+    "dev": "concurrently -n frontend,backend,admin -c cyan,magenta,yellow \"npm:dev:frontend\" \"npm:dev:backend\" \"npm:dev:admin\"",
     "dev:frontend": "vite",
     "dev:backend": "npm --prefix server run dev",
+    "dev:admin": "npm --prefix admin run dev",
     "build": "vite build",
     "preview": "vite preview",
     "seed": "npm --prefix server run seed",
-    "install:all": "npm install && npm --prefix server install"
-  }, 
+    "install:all": "npm install && npm --prefix server install && npm --prefix admin install"
+  },
   "dependencies": {
     "bad-words": "^4.0.0",
     "clsx": "2.1.1",
