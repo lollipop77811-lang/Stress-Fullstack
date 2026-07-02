@@ -12,7 +12,7 @@ import {
 /* ---------- types ---------- */
 
 type Props = {
-  wallIdx: number;          // 0..4 — which wall to stick the new note on
+  wallIdx: number;
   onSubmitted: (confession: {
     id: string;
     text: string;
@@ -22,6 +22,8 @@ type Props = {
     wallIdx: number;
     createdAt: string;
   }) => void;
+  auth?: ReturnType<typeof import("@/hooks/useAuth").useAuth>;
+  onAuthClick?: () => void;
 };
 
 /* ---------- constants ---------- */
@@ -61,7 +63,7 @@ const filter = new BadWords.Filter();
 
 /* ---------- component ---------- */
 
-export default function ConfessionComposer({ wallIdx, onSubmitted }: Props) {
+export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthClick }: Props) {
   const [text, setText] = useState("");
   const [author, setAuthor] = useState("");
   const [color, setColor] = useState<ConfessionColor>("yellow");
@@ -70,6 +72,7 @@ export default function ConfessionComposer({ wallIdx, onSubmitted }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ kind: "ok" | "err"; msg: string } | null>(null);
   const [showCrisis, setShowCrisis] = useState(false);
+  const [showClaimToast, setShowClaimToast] = useState(false);
 
   // Filter profanity on the way in (replace slurs with **** so user sees it)
   const filteredText = useMemo(() => {
@@ -128,6 +131,17 @@ export default function ConfessionComposer({ wallIdx, onSubmitted }: Props) {
             ? `stuck. 👍 wall ${result.actualWallIdx + 1} is fresh — you're the first to pin here.`
             : "stuck. 👍 your secret is now legally binding."
         );
+      }
+
+      // --- Post-confession "claim" toast ---
+      // Show once after first confession if NOT logged in
+      if (!auth?.user && auth?.firebaseEnabled) {
+        const claimKey = "osk.confessions.claimShown.v1";
+        if (!localStorage.getItem(claimKey)) {
+          localStorage.setItem(claimKey, "1");
+          setShowClaimToast(true);
+          setTimeout(() => setShowClaimToast(false), 12000);
+        }
       }
     } catch (err) {
       const msg =
@@ -391,6 +405,56 @@ export default function ConfessionComposer({ wallIdx, onSubmitted }: Props) {
 
       {/* Crisis overlay — shown if the confession contained self-harm language */}
       <CrisisOverlay show={showCrisis} onClose={() => setShowCrisis(false)} />
+
+      {/* Post-confession "claim" toast — appears once after first confession */}
+      <AnimatePresence>
+        {showClaimToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 30, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            exit={{ opacity: 0, y: 30, x: "-50%" }}
+            transition={{ type: "spring", stiffness: 320, damping: 24 }}
+            className="fixed bottom-8 left-1/2 z-[350] w-[90%] max-w-md rounded-2xl border-[3px] border-jet bg-electric p-5 text-cream shadow-brutal-xl"
+          >
+            <div className="flex items-start gap-3">
+              <span className="text-3xl">🔄</span>
+              <div className="flex-1">
+                <h4 className="font-display text-base font-extrabold uppercase tracking-tight">
+                  Want to sync across devices?
+                </h4>
+                <p className="mt-1 font-body text-sm text-cream/80">
+                  Create a free account to access your "★ yours" confessions
+                  from any device. Confessions stay anonymous — the account
+                  is just for syncing.
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={() => {
+                      setShowClaimToast(false);
+                      onAuthClick?.();
+                    }}
+                    className="rounded-lg border-2 border-jet bg-toxic px-4 py-2 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-sm transition-transform hover:-translate-y-0.5"
+                  >
+                    Create account →
+                  </button>
+                  <button
+                    onClick={() => setShowClaimToast(false)}
+                    className="rounded-lg border-2 border-cream/40 bg-transparent px-4 py-2 font-display text-xs font-bold uppercase tracking-tight text-cream/70"
+                  >
+                    No thanks
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowClaimToast(false)}
+                className="text-cream/50 hover:text-cream"
+              >
+                ✕
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
