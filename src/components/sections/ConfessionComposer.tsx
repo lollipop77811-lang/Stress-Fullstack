@@ -65,7 +65,7 @@ const filter = new BadWords.Filter();
 
 export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthClick }: Props) {
   const [text, setText] = useState("");
-  const [author, setAuthor] = useState("");
+  const [author, setAuthor] = useState(() => auth?.account?.username ?? "");
   const [color, setColor] = useState<ConfessionColor>("yellow");
   const [aging, setAging] = useState<ConfessionAging>("fresh");
   const [commentsEnabled, setCommentsEnabled] = useState(true);
@@ -100,7 +100,7 @@ export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthC
     try {
       const result = await createConfession({
         text: filteredText.trim(),
-        author: author.trim() || "anon",
+        author: author.trim() || auth?.account?.username || "anon",
         color,
         aging,
         wallIdx,
