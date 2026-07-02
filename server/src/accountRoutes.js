@@ -152,6 +152,7 @@ router.post("/auth/verify", authLimiter, async (req, res) => {
           email: account.email,
           username: account.username,
           emailVerified: account.emailVerified,
+          isAdmin: account.isAdmin ?? false,
           provider: account.provider,
           confessionIds: account.confessionIds.map((id) => id.toString()),
         },
@@ -203,6 +204,7 @@ router.post("/auth/verify", authLimiter, async (req, res) => {
         email: account.email,
         username: account.username,
         emailVerified: account.emailVerified,
+        isAdmin: account.isAdmin ?? false,
         provider: account.provider,
         confessionIds: [],
       },
@@ -310,6 +312,7 @@ router.get("/account", requireAuth, async (req, res) => {
         email: account.email,
         username: account.username,
         emailVerified: account.emailVerified,
+        isAdmin: account.isAdmin ?? false,
         provider: account.provider,
         confessionIds: account.confessionIds.map((id) => id.toString()),
         createdAt: account.createdAt,
@@ -417,3 +420,4 @@ router.put("/account/username", requireAuth, async (req, res) => {
 });
 
 export default router;
+export { requireAuth };

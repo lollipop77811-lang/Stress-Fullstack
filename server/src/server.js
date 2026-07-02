@@ -9,6 +9,7 @@ import mongoose from "mongoose";
 import confessionRoutes from "./confessionRoutes.js";
 import commentRoutes from "./commentRoutes.js";
 import accountRoutes from "./accountRoutes.js";
+import adminRoutes from "./adminRoutes.js";
 
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI =
@@ -66,6 +67,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api", confessionRoutes);
 app.use("/api", commentRoutes);
 app.use("/api", accountRoutes);
+app.use("/api", adminRoutes);
 
 // 404
 app.use((_req, res) => {

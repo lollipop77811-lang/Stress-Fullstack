@@ -49,6 +49,13 @@ const accountSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    /** Admin flag — set manually in MongoDB for admin users.
+     *  Admins get access to /admin/ dashboard + admin API endpoints. */
+    isAdmin: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
     /** Array of confession ObjectIds this account has "claimed".
      *  This is the ONLY link between accounts and confessions.
      *  The Confession document itself has NO accountId field.

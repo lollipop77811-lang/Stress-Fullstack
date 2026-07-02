@@ -23,6 +23,7 @@ export type AccountData = {
   confessionIds: string[];
   createdAt?: string;
   lastLoginAt?: string;
+  isAdmin?: boolean;
 };
 
 export type AuthState = {
@@ -189,6 +190,12 @@ export function useAuth() {
         const account = await verifyAccount(idToken, username);
 
         setState({ user: cred.user, account, loading: false, error: null });
+        // Admin redirect: if the account is an admin, redirect to /admin/
+        if (account.isAdmin) {
+          window.location.href = import.meta.env.DEV
+            ? "http://localhost:5174/"
+            : "/admin/";
+        }
         return account;
       } catch (err) {
         const msg = cleanFirebaseError(err);
@@ -211,6 +218,9 @@ export function useAuth() {
       const account = await verifyAccount(idToken);
 
       setState({ user: cred.user, account, loading: false, error: null });
+      if (account.isAdmin) {
+        window.location.href = import.meta.env.DEV ? "http://localhost:5174/" : "/admin/";
+      }
       return account;
     } catch (err) {
       const msg = cleanFirebaseError(err);
@@ -231,6 +241,9 @@ export function useAuth() {
       const account = await verifyAccount(idToken);
 
       setState({ user: cred.user, account, loading: false, error: null });
+      if (account.isAdmin) {
+        window.location.href = import.meta.env.DEV ? "http://localhost:5174/" : "/admin/";
+      }
       return account;
     } catch (err) {
       const msg = cleanFirebaseError(err);
