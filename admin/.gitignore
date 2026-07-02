@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+
+# Env (same public Firebase values as root .env)
+.env
+.env.local
+
+# OS
+.DS_Store
