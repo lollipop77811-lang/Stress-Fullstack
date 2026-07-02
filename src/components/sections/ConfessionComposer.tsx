@@ -65,7 +65,6 @@ const filter = new BadWords.Filter();
 
 export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthClick }: Props) {
   const [text, setText] = useState("");
-  const [author, setAuthor] = useState(() => auth?.account?.username ?? "");
   const [color, setColor] = useState<ConfessionColor>("yellow");
   const [aging, setAging] = useState<ConfessionAging>("fresh");
   const [commentsEnabled, setCommentsEnabled] = useState(true);
@@ -100,7 +99,7 @@ export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthC
     try {
       const result = await createConfession({
         text: filteredText.trim(),
-        author: author.trim() || auth?.account?.username || "anon",
+        author: auth?.account?.username || "anon",
         color,
         aging,
         wallIdx,
@@ -109,7 +108,6 @@ export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthC
       onSubmitted(result.confession);
       // Reset
       setText("");
-      setAuthor("");
       setColor("yellow");
       setAging("fresh");
 
@@ -296,22 +294,6 @@ export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthC
                   {charCount}/{CHAR_MAX}
                 </span>
               </div>
-            </div>
-
-            {/* Author input */}
-            <div className="mt-4">
-              <label className="mb-1.5 block font-display text-xs font-extrabold uppercase tracking-widest opacity-70">
-                Who's confessing? <span className="opacity-50">(optional)</span>
-              </label>
-              <input
-                type="text"
-                value={author}
-                onChange={(e) => setAuthor(e.target.value.slice(0, 30))}
-                placeholder="anon"
-                maxLength={30}
-                data-hover="NAME"
-                className="w-full rounded-xl border-2 border-jet bg-cream/80 px-4 py-2.5 font-body text-sm font-semibold text-jet shadow-[3px_3px_0_#0b0c10] outline-none placeholder:text-jet/40 focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-[transform,box-shadow] duration-150"
-              />
             </div>
 
             {/* Comments toggle */}
