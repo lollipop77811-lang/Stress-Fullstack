@@ -422,10 +422,6 @@ router.post("/admin/avatar", requireAdmin, avatarUpload.single("avatar"), async 
   }
 });
 
-// Serve uploaded files statically
-import express from "express";
-router.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
-
 export default router;
 // Export requireAdmin for potential reuse
 export { requireAdmin };
