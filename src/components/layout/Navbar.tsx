@@ -83,14 +83,24 @@ export default function Navbar({
           {auth.firebaseEnabled && (
             isLoggedIn ? (
               <a
-                href="#/account"
+                href={auth.account?.isAdmin ? undefined : "#/account"}
+                onClick={auth.account?.isAdmin ? (e) => { e.preventDefault(); window.location.href = import.meta.env.DEV ? "http://localhost:5174/" : "/admin/"; } : undefined}
                 data-hover="ME!"
                 className="flex items-center gap-1.5 rounded-xl border-2 border-jet bg-toxic px-2.5 py-2 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-brutal-sm transition-transform duration-150 hover:-translate-y-0.5"
               >
-                <span className="grid h-5 w-5 place-items-center rounded-full border-2 border-jet bg-cream text-[10px] font-extrabold">
-                  {auth.account?.username.charAt(0).toUpperCase() ?? "?"}
-                </span>
+                {auth.account?.avatarUrl ? (
+                  <img
+                    src={auth.account.avatarUrl}
+                    alt="avatar"
+                    className="h-5 w-5 rounded-full border-2 border-jet object-cover"
+                  />
+                ) : (
+                  <span className="grid h-5 w-5 place-items-center rounded-full border-2 border-jet bg-cream text-[10px] font-extrabold">
+                    {auth.account?.username.charAt(0).toUpperCase() ?? "?"}
+                  </span>
+                )}
                 <span className="hidden sm:inline">{auth.account?.username ?? "account"}</span>
+                {auth.account?.isAdmin && <span className="text-[8px]">🛡️</span>}
               </a>
             ) : (
               <button
