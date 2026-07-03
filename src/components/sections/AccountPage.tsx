@@ -288,13 +288,22 @@ export default function AccountPage({ auth }: { auth: ReturnType<typeof useAuth>
         </div>
 
         {/* Back-home CTA */}
-        <div className="ac-reveal mt-8 flex justify-center gap-3">
+        <div className="ac-reveal mt-8 flex flex-wrap justify-center gap-3">
           <a href="#top" data-hover="BACK!" className="inline-flex items-center gap-2 rounded-xl border-2 border-jet bg-jet px-6 py-3 font-display text-sm font-bold uppercase tracking-tight text-cream shadow-brutal">
             ← home
           </a>
           <a href="#/mine" data-hover="MINE!" className="inline-flex items-center gap-2 rounded-xl border-2 border-jet bg-toxic px-6 py-3 font-display text-sm font-bold uppercase tracking-tight text-jet shadow-brutal">
             ★ my confessions
           </a>
+          {account.isAdmin && (
+            <a
+              href={import.meta.env.DEV ? "http://localhost:5174/" : "/admin/"}
+              data-hover="ADMIN!"
+              className="inline-flex items-center gap-2 rounded-xl border-2 border-jet bg-pink px-6 py-3 font-display text-sm font-bold uppercase tracking-tight text-cream shadow-brutal transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-brutal-lg"
+            >
+              🛡️ Admin Dashboard →
+            </a>
+          )}
         </div>
       </div>
     </section>
