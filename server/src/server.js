@@ -5,6 +5,8 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
+import path from "path";
+import fs from "fs";
 
 import confessionRoutes from "./confessionRoutes.js";
 import commentRoutes from "./commentRoutes.js";
@@ -63,6 +65,14 @@ app.get("/api/health", (_req, res) => {
     time: new Date().toISOString(),
   });
 });
+
+// Serve uploaded files (avatars) at /uploads/ — NOT under /api/
+// so the avatarUrl stored in DB (/uploads/avatars/xxx.jpg) resolves correctly
+const uploadsDir = path.resolve(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use("/uploads", express.static(uploadsDir));
 
 // Routes
 app.use("/api", confessionRoutes);
