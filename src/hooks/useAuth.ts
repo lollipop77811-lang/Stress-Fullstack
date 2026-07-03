@@ -24,6 +24,7 @@ export type AccountData = {
   createdAt?: string;
   lastLoginAt?: string;
   isAdmin?: boolean;
+  avatarUrl?: string | null;
 };
 
 export type AuthState = {
