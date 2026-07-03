@@ -5,14 +5,16 @@ import Dashboard from "./pages/Dashboard";
 import Reports from "./pages/Reports";
 import Flagged from "./pages/Flagged";
 import Search from "./pages/Search";
+import Horoscope from "./pages/Horoscope";
 
-type Page = "dashboard" | "reports" | "flagged" | "search";
+type Page = "dashboard" | "reports" | "flagged" | "search" | "horoscope";
 
 const NAV: { id: Page; label: string; icon: string }[] = [
   { id: "dashboard", label: "Dashboard", icon: "📊" },
   { id: "reports", label: "Reports", icon: "🚩" },
   { id: "flagged", label: "Crisis Flags", icon: "💙" },
   { id: "search", label: "Search", icon: "🔍" },
+  { id: "horoscope", label: "Horoscope", icon: "🔮" },
 ];
 
 export default function App() {
@@ -72,6 +74,7 @@ export default function App() {
         {page === "reports" && <Reports auth={auth} />}
         {page === "flagged" && <Flagged auth={auth} />}
         {page === "search" && <Search auth={auth} />}
+        {page === "horoscope" && <Horoscope auth={auth} />}
       </div>
     </div>
   );

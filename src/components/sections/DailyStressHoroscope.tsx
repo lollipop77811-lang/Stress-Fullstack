@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -161,6 +161,33 @@ export default function DailyStressHoroscope() {
     return null;
   });
 
+  // API-driven predictions: if admin has set a prediction for a sign
+  // today, use it. Otherwise fall back to the deterministic hardcoded one.
+  const [apiPredictions, setApiPredictions] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetch("/api/horoscope/today")
+      .then((res) => res.json())
+      .then((data) => {
+        const map: Record<string, string> = {};
+        for (const h of data.horoscopes || []) {
+          if (h.prediction) map[h.sign] = h.prediction;
+        }
+        if (Object.keys(map).length > 0) {
+          setApiPredictions(map);
+        }
+      })
+      .catch(() => {
+        /* fallback to hardcoded predictions */
+      });
+  }, []);
+
+  const getPrediction = (signName: string): string => {
+    // API prediction takes priority over hardcoded
+    if (apiPredictions[signName]) return apiPredictions[signName];
+    return getPredictionForSign(signName);
+  };
+
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
       gsap.fromTo(
@@ -245,7 +272,7 @@ export default function DailyStressHoroscope() {
               transition={{ type: "spring", stiffness: 260, damping: 22 }}
               className="hs-reveal relative mb-12"
             >
-              <FeaturedSignCard sign={selectedSign} prediction={getPredictionForSign(selectedSign.name)} />
+              <FeaturedSignCard sign={selectedSign} prediction={getPrediction(selectedSign.name)} />
             </motion.div>
           )}
         </AnimatePresence>
