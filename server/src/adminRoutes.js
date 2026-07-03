@@ -3,6 +3,9 @@
 
 import { Router } from "express";
 import mongoose from "mongoose";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import Account from "./accountModel.js";
 import Confession from "./confessionModel.js";
 import Comment from "./commentModel.js";
@@ -366,6 +369,62 @@ router.delete("/admin/comments/:id", requireAdmin, async (req, res) => {
     return res.status(500).json({ error: "failed to delete" });
   }
 });
+
+// --- Avatar upload (admin only) ---
+
+// Ensure uploads directory exists
+const UPLOAD_DIR = path.resolve(process.cwd(), "uploads", "avatars");
+if (!fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+
+// Multer config: 2MB max, images only
+const avatarUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname) || ".jpg";
+      cb(null, `${req.firebaseUser.uid}${ext}`);
+    },
+  }),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("only image files are allowed"));
+    }
+  },
+});
+
+/**
+ * POST /api/admin/avatar
+ * Uploads a profile picture for the admin.
+ * Multipart form: field "avatar" = image file (max 2MB, images only)
+ * Returns: { avatarUrl: "/uploads/avatars/xxx.jpg" }
+ */
+router.post("/admin/avatar", requireAdmin, avatarUpload.single("avatar"), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "no file uploaded" });
+  }
+
+  try {
+    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+    await Account.updateOne(
+      { firebaseUid: req.firebaseUser.uid },
+      { $set: { avatarUrl } }
+    );
+
+    return res.json({ avatarUrl, saved: true });
+  } catch (err) {
+    console.error("[admin/avatar] error:", err);
+    return res.status(500).json({ error: "failed to save avatar" });
+  }
+});
+
+// Serve uploaded files statically
+import express from "express";
+router.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
 export default router;
 // Export requireAdmin for potential reuse

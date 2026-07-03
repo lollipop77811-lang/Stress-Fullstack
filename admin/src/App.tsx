@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAdminAuth } from "./useAdminAuth";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -20,6 +20,28 @@ const NAV: { id: Page; label: string; icon: string }[] = [
 export default function App() {
   const auth = useAdminAuth();
   const [page, setPage] = useState<Page>("dashboard");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setAvatarError("max 2MB");
+      return;
+    }
+    setUploading(true);
+    setAvatarError("");
+    try {
+      await auth.uploadAvatar(file);
+    } catch {
+      setAvatarError("upload failed");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   // Loading state
   if (auth.loading) {
@@ -52,7 +74,47 @@ export default function App() {
           ))}
         </div>
         <div className="sidebar-footer">
-          <div style={{ marginBottom: 8 }}>Logged in as:<br /><strong>{auth.account.username}</strong></div>
+          {/* Avatar */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 12 }}>
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                width: 60, height: 60, borderRadius: "50%",
+                background: auth.account.avatarUrl ? `url(${auth.account.avatarUrl}) center/cover` : "#4361ee",
+                border: "2px solid rgba(255,255,255,.3)",
+                cursor: "pointer", position: "relative",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 24, fontWeight: 700, color: "#fff",
+                marginBottom: 6,
+              }}
+              title="Click to upload profile picture"
+            >
+              {!auth.account.avatarUrl && auth.account.username.charAt(0).toUpperCase()}
+              {uploading && (
+                <div style={{
+                  position: "absolute", inset: 0, borderRadius: "50%",
+                  background: "rgba(0,0,0,.5)", display: "flex",
+                  alignItems: "center", justifyContent: "center", fontSize: 14,
+                }}>
+                  ⏳
+                </div>
+              )}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handleAvatarUpload}
+            />
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,.7)", fontWeight: 600 }}>
+              {auth.account.username}
+            </div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,.4)", marginTop: 2 }}>
+              {avatarError || "click avatar to change"}
+            </div>
+          </div>
+
           <button
             onClick={auth.logout}
             style={{
