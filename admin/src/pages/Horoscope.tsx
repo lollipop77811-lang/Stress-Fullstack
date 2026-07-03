@@ -81,6 +81,39 @@ export default function Horoscope({ auth }: { auth: ReturnType<typeof useAdminAu
     setSaving(null);
   };
 
+  const [savingAll, setSavingAll] = useState(false);
+  const [allSaved, setAllSaved] = useState(false);
+
+  const saveAll = async () => {
+    setSavingAll(true);
+    const token = await auth.getToken();
+    if (!token) return;
+    try {
+      // Save all 12 signs in parallel
+      await Promise.all(
+        SIGNS.map((s) =>
+          fetch(`/api/admin/horoscope/${s.name}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ prediction: entries[s.name] || "" }),
+          })
+        )
+      );
+      setAllSaved(true);
+      setSavedSigns(new Set(SIGNS.map((s) => s.name)));
+      setTimeout(() => {
+        setAllSaved(false);
+        setSavedSigns(new Set());
+      }, 3000);
+    } catch {
+      /* ignore */
+    }
+    setSavingAll(false);
+  };
+
   if (loading) return <div className="loading">Loading horoscopes...</div>;
 
   const elementColors: Record<string, string> = {
@@ -92,9 +125,28 @@ export default function Horoscope({ auth }: { auth: ReturnType<typeof useAdminAu
 
   return (
     <div>
-      <div className="page-header">
-        <h1>🔮 Horoscope Manager</h1>
-        <p>Update daily predictions for all 12 zodiac signs — {date}</p>
+      <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h1>🔮 Horoscope Manager</h1>
+          <p>Update daily predictions for all 12 zodiac signs — {date}</p>
+        </div>
+        <button
+          onClick={saveAll}
+          disabled={savingAll}
+          style={{
+            padding: "10px 24px",
+            background: allSaved ? "#28a745" : "#4361ee",
+            color: "#fff",
+            border: "none",
+            borderRadius: 6,
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: savingAll ? "wait" : "pointer",
+            opacity: savingAll ? 0.7 : 1,
+          }}
+        >
+          {allSaved ? "✓ All Updated!" : savingAll ? "Updating all..." : "Update All →"}
+        </button>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: 16 }}>
