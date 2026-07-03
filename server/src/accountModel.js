@@ -56,6 +56,13 @@ const accountSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    /** Avatar URL — profile picture for admin dashboard.
+     *  Stored as a relative path (e.g. /uploads/avatars/xxx.jpg).
+     *  Only admins can upload; regular users don't have avatars. */
+    avatarUrl: {
+      type: String,
+      default: null,
+    },
     /** Array of confession ObjectIds this account has "claimed".
      *  This is the ONLY link between accounts and confessions.
      *  The Confession document itself has NO accountId field.

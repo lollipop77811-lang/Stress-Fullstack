@@ -32,6 +32,7 @@ export type AdminAccount = {
   email: string;
   username: string;
   isAdmin: boolean;
+  avatarUrl?: string | null;
 };
 
 export function useAdminAuth() {
@@ -132,5 +133,22 @@ export function useAdminAuth() {
     return await user.getIdToken();
   };
 
-  return { user, account, loading, error, loginWithEmail, loginWithGoogle, logout, getToken, firebaseEnabled: !!auth };
+  const uploadAvatar = async (file: File) => {
+    const token = await getToken();
+    if (!token) return;
+    const formData = new FormData();
+    formData.append("avatar", file);
+    const res = await fetch("/api/admin/avatar", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) throw new Error("upload failed");
+    const data = await res.json();
+    // Update account state with new avatar URL
+    setAccount((prev) => prev ? { ...prev, avatarUrl: data.avatarUrl } : prev);
+    return data.avatarUrl;
+  };
+
+  return { user, account, loading, error, loginWithEmail, loginWithGoogle, logout, getToken, uploadAvatar, firebaseEnabled: !!auth };
 }

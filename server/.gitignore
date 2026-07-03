@@ -9,6 +9,9 @@ node_modules/
 # Firebase service account key (NEVER COMMIT!)
 firebase-service-account.json
 
+# Uploaded files (avatars, etc.)
+uploads/
+
 # Logs
 logs/
 *.log
