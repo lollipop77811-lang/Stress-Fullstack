@@ -365,6 +365,10 @@ export default function WhisperWall() {
                 </motion.span>
               ))}
             </h2>
+            {/* Tagline — stays below the headline */}
+            <p className="mt-2 font-hand text-2xl font-bold text-pink sm:text-3xl">
+              (raat gai baat gai)
+            </p>
             {/* Reactive subtitle — changes based on what the user types */}
             <p className="mt-4 max-w-lg font-body text-base text-cream/70 sm:text-lg">
               <AnimatePresence mode="wait">
