@@ -40,7 +40,137 @@ type Note = {
   witnessCount?: number;
   /** True if the current browser session has already witnessed this note. */
   witnessed?: boolean;
+  /** Internal: preferred grid slot (0..14) before collision resolution.
+   *  May be reassigned by assignPositions/placeNoteAmong to avoid overlap. */
+  preferredSlot?: number;
+  /** Internal: per-note jitter within a slot (set once at creation). */
+  jitterX?: number;
+  jitterY?: number;
 };
+
+/* ============================================================
+   GRID LAYOUT & COLLISION RESOLUTION
+   The wall is a 5-col × 3-row grid (15 slots). Each note hashes to
+   a preferred slot, but two notes can collide. assignPositions() and
+   placeNoteAmong() move colliding notes to the nearest free slot so
+   no two notes stick on top of each other.
+   ============================================================ */
+
+const GRID_COLS = 5;
+const GRID_ROWS = 3;
+const GRID_SLOTS = GRID_COLS * GRID_ROWS;
+const COL_STEP = 18.5;
+const ROW_STEP = 22;
+const COL_START = 3;
+const ROW_START = 28;
+
+function slotToPos(slot: number, jitterX: number, jitterY: number) {
+  const col = slot % GRID_COLS;
+  const row = Math.floor(slot / GRID_COLS);
+  return {
+    left: COL_START + col * COL_STEP + jitterX,
+    top: ROW_START + row * ROW_STEP + jitterY,
+  };
+}
+
+/**
+ * Reassign positions across a batch of notes so no two share a slot.
+ * - Pass 1: each note keeps its preferred slot if free.
+ * - Pass 2: colliding notes move to the nearest free slot.
+ * - Pass 3: if the wall is full (>15 notes), extras stack on their
+ *   preferred slot with extra random offset so they don't perfectly
+ *   overlap.
+ */
+function assignPositions(notes: Note[]): Note[] {
+  const result = notes.map((n) => ({ ...n }));
+  const taken = new Array(GRID_SLOTS).fill(false);
+  const extras: number[] = [];
+
+  // Pass 1: greedy assignment by preferred slot
+  for (let i = 0; i < result.length; i++) {
+    const pref = result[i].preferredSlot ?? 0;
+    if (pref >= 0 && pref < GRID_SLOTS && !taken[pref]) {
+      taken[pref] = true;
+    } else {
+      extras.push(i);
+    }
+  }
+
+  // Pass 2: for each extra, find the nearest free slot
+  const stillExtras: number[] = [];
+  for (const i of extras) {
+    const pref = result[i].preferredSlot ?? 0;
+    let found = -1;
+    for (let dist = 1; dist < GRID_SLOTS && found === -1; dist++) {
+      const lo = pref - dist;
+      const hi = pref + dist;
+      if (lo >= 0 && !taken[lo]) found = lo;
+      else if (hi < GRID_SLOTS && !taken[hi]) found = hi;
+    }
+    if (found !== -1) {
+      taken[found] = true;
+      result[i].preferredSlot = found;
+      const pos = slotToPos(found, result[i].jitterX ?? 0, result[i].jitterY ?? 0);
+      result[i].left = pos.left;
+      result[i].top = pos.top;
+    } else {
+      stillExtras.push(i);
+    }
+  }
+
+  // Pass 3: stack extras on preferred slot with larger offset
+  for (const i of stillExtras) {
+    result[i].left += (Math.random() - 0.5) * 24;
+    result[i].top += (Math.random() - 0.5) * 16;
+  }
+
+  return result;
+}
+
+/**
+ * Place a single new note among existing ones WITHOUT moving existing
+ * notes. Returns a copy of newNote with an adjusted position that avoids
+ * collisions. Used when a fresh confession lands on the wall so it never
+ * sticks on top of an existing one.
+ */
+function placeNoteAmong(existing: Note[], newNote: Note): Note {
+  const taken = new Array(GRID_SLOTS).fill(false);
+  for (const n of existing) {
+    const slot = n.preferredSlot ?? 0;
+    if (slot >= 0 && slot < GRID_SLOTS) taken[slot] = true;
+  }
+
+  const pref = newNote.preferredSlot ?? 0;
+  let finalSlot = pref;
+  let isExtra = false;
+
+  if (taken[pref]) {
+    let found = -1;
+    for (let dist = 1; dist < GRID_SLOTS && found === -1; dist++) {
+      const lo = pref - dist;
+      const hi = pref + dist;
+      if (lo >= 0 && !taken[lo]) found = lo;
+      else if (hi < GRID_SLOTS && !taken[hi]) found = hi;
+    }
+    if (found !== -1) {
+      finalSlot = found;
+    } else {
+      // Wall is full — stack on preferred slot with extra offset
+      isExtra = true;
+    }
+  }
+
+  const jx = newNote.jitterX ?? 0;
+  const jy = newNote.jitterY ?? 0;
+  const pos = slotToPos(finalSlot, jx, jy);
+
+  return {
+    ...newNote,
+    preferredSlot: finalSlot,
+    left: pos.left + (isExtra ? (Math.random() - 0.5) * 24 : 0),
+    top: pos.top + (isExtra ? (Math.random() - 0.5) * 16 : 0),
+  };
+}
 
 /* ============================================================
    STICKY NOTE COLORS (Post-it palette)
@@ -232,13 +362,13 @@ function userConfessionToNote(
   const rand = (seed: number) => ((h ^ (seed * 2654435761)) >>> 0) / 4294967296;
 
   // Distribute across 5 cols × 3 rows, like seed notes
-  const slot = Math.floor(rand(1) * 15);
-  const col = slot % 5;
-  const row = Math.floor(slot / 5);
+  const preferredSlot = Math.floor(rand(1) * GRID_SLOTS);
   const jitterX = (rand(2) - 0.5) * 12;
   const jitterY = (rand(3) - 0.5) * 8;
-  const left = 3 + col * 18.5 + jitterX;
-  const top = 28 + row * 22 + jitterY;
+  const col = preferredSlot % GRID_COLS;
+  const row = Math.floor(preferredSlot / GRID_COLS);
+  const left = COL_START + col * COL_STEP + jitterX;
+  const top = ROW_START + row * ROW_STEP + jitterY;
   const rot = (rand(4) - 0.5) * 18;
   const w = 150 + Math.floor(rand(5) * 60);
 
@@ -255,6 +385,9 @@ function userConfessionToNote(
     isMine,
     witnessCount: c.witnessCount ?? 0,
     witnessed,
+    preferredSlot,
+    jitterX,
+    jitterY,
   };
 }
 
@@ -329,7 +462,11 @@ export default function ConfessionWall({
         return;
       }
 
-      const futureNote = userConfessionToNote(c, true, false);
+      const rawNote = userConfessionToNote(c, true, false);
+      // Pick a free slot so the new note doesn't stick on an existing one.
+      // Reads current userNotes (closure) — fine because no other notes are
+      // added during the flight.
+      const futureNote = placeNoteAmong(userNotes, rawNote);
       const prefersReduced = window.matchMedia(
         "(prefers-reduced-motion: reduce)"
       ).matches;
@@ -523,9 +660,11 @@ export default function ConfessionWall({
     setLoading(true);
     listConfessions(wallIdx).then((list) => {
       if (cancelled) return;
-      const notes = list.map((c) =>
+      const rawNotes = list.map((c) =>
         userConfessionToNote(c, mine.has(String(c.id)), witnessed.has(String(c.id)))
       );
+      // Resolve slot collisions so no two notes overlap
+      const notes = assignPositions(rawNotes);
       setUserNotes(notes);
       setLoading(false);
     });
