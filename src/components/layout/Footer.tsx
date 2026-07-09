@@ -32,7 +32,7 @@ export default function Footer() {
               </span>
               <span className="font-display text-lg font-extrabold tracking-tight">
                 O<span className="text-pink">.</span>Stress
-                <span className="text-electric">Kalaana</span>
+                <span className="text-electric">Kal Ana</span>
               </span>
             </a>
             <p className="mt-5 max-w-sm font-body text-sm leading-relaxed text-cream/70 sm:text-base">
@@ -70,7 +70,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-cream/20 pt-6 text-center sm:flex-row sm:text-left">
           <p className="text-xs font-semibold uppercase tracking-wide text-cream/60">
-            © {new Date().getFullYear()} O.StressKalaana · Made with 😂 &amp;
+            © {new Date().getFullYear()} O.StressKalAna · Made with 😂 &amp;
             questionable decisions.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">

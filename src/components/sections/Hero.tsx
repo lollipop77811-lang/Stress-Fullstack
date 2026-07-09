@@ -89,7 +89,7 @@ export default function Hero() {
   const headline = [
     { text: "O", className: "text-jet" },
     { text: "STRESS", className: "text-pink" },
-    { text: "KALAANA", className: "text-stroke-thick" },
+    { text: "KAL ANA", className: "text-stroke-thick" },
   ];
 
   return (

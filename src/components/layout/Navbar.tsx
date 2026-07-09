@@ -19,14 +19,14 @@ function Logo() {
       href="#top"
       data-hover="HEY!"
       className="group flex shrink-0 items-center gap-2"
-      aria-label="O Stress Kalaana — home"
+      aria-label="O STRESS KAL ANA — home"
     >
       <span className="grid h-9 w-9 place-items-center rounded-lg border-2 border-jet bg-toxic font-display text-base font-extrabold shadow-brutal-sm transition-transform duration-200 group-hover:rotate-6 sm:h-10 sm:w-10 sm:text-lg">
         😤
       </span>
       <span className="font-display text-base font-extrabold leading-none tracking-tight sm:text-lg">
         O<span className="text-pink">.</span>Stress
-        <span className="text-electric">Kalaana</span>
+        <span className="text-electric">Kal Ana</span>
       </span>
     </a>
   );
