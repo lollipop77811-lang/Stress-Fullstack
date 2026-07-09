@@ -319,10 +319,7 @@ export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthC
             </div>
 
             {/* Submit + meta */}
-            <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="font-hand text-sm font-bold text-ink/60">
-                ↳ sticks on wall {wallIdx + 1}/5
-              </p>
+            <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
               <motion.button
                 type="submit"
                 disabled={!canSubmit}

@@ -218,6 +218,30 @@ export default function MyConfessions() {
   const activeCount = notes.filter((n) => !n.isArchived).length;
   const archivedCount = notes.filter((n) => n.isArchived).length;
 
+  /** Navigate to the wall route, then smooth-scroll to the confession
+   *  composer card. Waits for the route change + React render before
+   *  scrolling, because the composer element only exists on the wall
+   *  page. */
+  function goToComposer() {
+    if (window.location.hash !== "#/wall") {
+      window.location.hash = "#/wall";
+    }
+    // Wait for the route change to render the wall page (which contains
+    // the composer), then scroll. A few rAFs + a small timeout is the
+    // most reliable across browsers.
+    const tryScroll = (attemptsLeft: number) => {
+      const el = document.getElementById("composer");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      if (attemptsLeft > 0) {
+        window.setTimeout(() => tryScroll(attemptsLeft - 1), 100);
+      }
+    };
+    window.setTimeout(() => tryScroll(10), 120);
+  }
+
   return (
     <section
       id="mine"
@@ -277,13 +301,13 @@ export default function MyConfessions() {
         >
           ← back to wall
         </a>
-        <a
-          href="#/wall"
+        <button
+          onClick={() => goToComposer()}
           data-hover="WRITE!"
           className="inline-flex items-center gap-1.5 rounded-xl border-2 border-jet bg-toxic px-3 py-2 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-[3px_3px_0_#0b0c10] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#0b0c10]"
         >
           ✍️ write more
-        </a>
+        </button>
       </div>
 
       {/* Content area */}
@@ -314,14 +338,14 @@ export default function MyConfessions() {
             <p className="mt-4 max-w-md font-hand text-xl font-bold text-cream/80 drop-shadow-[1px_1px_0_rgba(11,12,16,0.7)]">
               you haven't pinned anything. the wall is waiting. go write your first confession.
             </p>
-            <a
-              href="#/wall"
+            <button
+              onClick={() => goToComposer()}
               data-hover="WRITE!"
               className="mt-8 inline-flex items-center gap-2 rounded-xl border-2 border-jet bg-toxic px-7 py-4 font-display text-base font-bold uppercase tracking-tight text-jet shadow-[6px_6px_0_#0b0c10] transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-[8px_8px_0_#0b0c10] sm:text-lg"
             >
               <span className="animate-wiggle">✍️</span>
               Write your first →
-            </a>
+            </button>
           </div>
         ) : error ? (
           <div className="mc-reveal flex min-h-[400px] flex-col items-center justify-center text-center">
