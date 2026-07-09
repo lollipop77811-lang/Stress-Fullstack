@@ -30,7 +30,7 @@ function buildShareText(text: string, author: string): string {
   // Truncate long confessions so the URL fits in tweet/X character limits
   const maxText = 180;
   const truncated = text.length > maxText ? text.slice(0, maxText) + "…" : text;
-  return `"${truncated}" — ${author}\n\nvia O Stress Kalaana`;
+  return `"${truncated}" — ${author}\n\nvia O Stress Kal Ana`;
 }
 
 export default function ShareButtons({ text, author, id, className }: Props) {
@@ -67,7 +67,7 @@ export default function ShareButtons({ text, author, id, className }: Props) {
     if (typeof navigator !== "undefined" && "share" in navigator) {
       try {
         await navigator.share({
-          title: "O Stress Kalaana — Confession",
+          title: "O Stress Kal Ana — Confession",
           text: shareText,
           url: shareUrl,
         });
