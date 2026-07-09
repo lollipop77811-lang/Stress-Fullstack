@@ -18,6 +18,10 @@ export default function CustomCursor() {
   const [hovering, setHovering] = useState(false);
   const [label, setLabel] = useState<string>("HA!");
   const [down, setDown] = useState(false);
+  /** True when the pointer is over a text-input element (textarea/input/
+   *  contenteditable). In that case we hide the custom cursor entirely so
+   *  the native caret stays visible and the user can edit text normally. */
+  const [overTextInput, setOverTextInput] = useState(false);
 
   const x = useMotionValue(-100);
   const y = useMotionValue(-100);
@@ -36,12 +40,25 @@ export default function CustomCursor() {
     };
 
     const over = (e: MouseEvent) => {
-      const target = (e.target as HTMLElement)?.closest(
-        "[data-hover]"
-      ) as HTMLElement | null;
-      if (target) {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      // Check if the pointer is over a text-editing element. If so,
+      // hide the custom cursor so the native caret is visible.
+      const isTextInput =
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "INPUT" ||
+        target.isContentEditable;
+      setOverTextInput(isTextInput);
+      if (isTextInput) {
+        setHovering(false);
+        return;
+      }
+
+      const hoverTarget = target.closest("[data-hover]") as HTMLElement | null;
+      if (hoverTarget) {
         setHovering(true);
-        setLabel(target.dataset.hover || "HA!");
+        setLabel(hoverTarget.dataset.hover || "HA!");
       } else {
         setHovering(false);
       }
@@ -63,6 +80,13 @@ export default function CustomCursor() {
   }, [x, y]);
 
   if (!enabled) return null;
+
+  // When over a text input, hide both the ring and the dot so the
+  // native caret is visible and the user can see exactly where they're
+  // editing. Also restore the native cursor (CSS) via the parent class.
+  if (overTextInput) {
+    return null;
+  }
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[9999] hidden md:block">
