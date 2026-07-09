@@ -10,7 +10,7 @@
 import mongoose from "mongoose";
 
 const COMMENT_CAP = 50; // max comments per confession before new ones are blocked
-const COMMENT_MAX_LENGTH = 200;
+const COMMENT_MAX_LENGTH = 500;
 const COMMENT_MIN_LENGTH = 1;
 
 const commentSchema = new mongoose.Schema(
@@ -20,7 +20,7 @@ const commentSchema = new mongoose.Schema(
       required: [true, "text is required"],
       trim: true,
       minlength: [COMMENT_MIN_LENGTH, "comment must be at least 1 character"],
-      maxlength: [COMMENT_MAX_LENGTH, "comment must be at most 200 characters"],
+      maxlength: [COMMENT_MAX_LENGTH, "comment must be at most 500 characters"],
     },
     author: {
       type: String,

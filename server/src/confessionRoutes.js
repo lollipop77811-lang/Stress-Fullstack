@@ -399,8 +399,8 @@ router.post("/confessions", postLimiter, async (req, res) => {
   if (typeof text !== "string" || text.trim().length < 3) {
     return res.status(400).json({ error: "text must be at least 3 characters" });
   }
-  if (text.length > 200) {
-    return res.status(400).json({ error: "text must be at most 200 characters" });
+  if (text.length > 500) {
+    return res.status(400).json({ error: "text must be at most 500 characters" });
   }
   const requestedWallIdx = Number(wallIdx);
   if (!Number.isInteger(requestedWallIdx) || requestedWallIdx < 0) {

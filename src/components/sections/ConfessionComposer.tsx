@@ -28,7 +28,7 @@ type Props = {
 
 /* ---------- constants ---------- */
 
-const CHAR_MAX = 200;
+const CHAR_MAX = 500;
 const CHAR_MIN = 3;
 
 const COLORS: { id: ConfessionColor; hex: string; label: string }[] = [
