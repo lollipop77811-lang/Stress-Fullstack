@@ -280,7 +280,7 @@ export default function ConfessionWall({
   const root = useRef<HTMLDivElement>(null);
   const [direction, setDirection] = useState(1); // 1 = next, -1 = prev
   const [open, setOpen] = useState<Note | null>(null);
-  const [dragHint, setDragHint] = useState(true);
+  const [, setDragHint] = useState(true);
 
   // User confessions fetched from the backend (per wall)
   const [userNotes, setUserNotes] = useState<Note[]>([]);
@@ -660,9 +660,6 @@ export default function ConfessionWall({
             <span className="inline-block rotate-[-2deg] rounded-full border-2 border-cream bg-pink px-3 py-1 font-display text-[10px] font-extrabold uppercase tracking-widest text-cream shadow-[3px_3px_0_#0b0c10] sm:text-xs">
               📌 wall {displayN} / {totalWalls}
             </span>
-            <span className="font-hand text-base font-bold text-toxic drop-shadow-[2px_2px_0_rgba(11,12,16,0.6)] sm:text-xl">
-              swipe right →
-            </span>
           </div>
           <h2 className="mt-2 font-display text-3xl font-extrabold uppercase leading-[0.9] tracking-tight text-cream drop-shadow-[3px_3px_0_rgba(11,12,16,0.6)] sm:text-5xl">
             Wall of
@@ -875,19 +872,6 @@ export default function ConfessionWall({
       </motion.div>
 
       {/* Drag hint (first interaction) */}
-      <AnimatePresence>
-        {dragHint && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="cw-reveal pointer-events-none absolute bottom-32 left-1/2 z-20 -translate-x-1/2 rounded-full border-2 border-cream bg-jet px-4 py-2 font-display text-xs font-bold uppercase tracking-widest text-toxic shadow-[3px_3px_0_#fcf7f8] sm:text-sm"
-          >
-            ← swipe right for next wall →
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Bottom-center nav: prev / next + wall counter */}
       <div className="cw-reveal absolute bottom-6 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3">
         <button
