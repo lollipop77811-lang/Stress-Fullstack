@@ -17,7 +17,7 @@ const confessionSchema = new mongoose.Schema(
       required: [true, "text is required"],
       trim: true,
       minlength: [3, "text must be at least 3 characters"],
-      maxlength: [200, "text must be at most 200 characters"],
+      maxlength: [500, "text must be at most 500 characters"],
     },
     author: {
       type: String,

@@ -38,10 +38,10 @@ const DEFAULT_SUBTITLE_COLOR = "var(--color-toxic)";
 const PAUSE_MSG = "take your time. the wall is patient.";
 
 const LENGTH_NUDGES: { at: number; msg: string }[] = [
-  { at: 50, msg: "↳ keep going. the wall is listening." },
-  { at: 100, msg: "↳ that's real. the wall holds real things." },
-  { at: 150, msg: "↳ almost there. one more breath." },
-  { at: 200, msg: "↳ that's enough. the wall has it now." },
+  { at: 100, msg: "↳ keep going. the wall is listening." },
+  { at: 250, msg: "↳ that's real. the wall holds real things." },
+  { at: 400, msg: "↳ almost there. one more breath." },
+  { at: 500, msg: "↳ that's enough. the wall has it now." },
 ];
 
 function getKeywordResponse(text: string): KeywordResponse | null {
@@ -320,7 +320,7 @@ export default function WhisperWall() {
     w.dissolved ? 0 : Math.max(0, w.ttl - (Date.now() - w.createdAt));
 
   const charCount = text.length;
-  const charMax = 200;
+  const charMax = 500;
 
   return (
     <section
@@ -457,7 +457,7 @@ export default function WhisperWall() {
                 <textarea
                   value={text}
                   onChange={(e) => handleTextChange(e.target.value)}
-                  placeholder="whisper something. no one will know. (200 chars of pure release)"
+                  placeholder="whisper something. no one will know. (500 chars of pure release)"
                   rows={2}
                   data-hover="VENT"
                   className="w-full resize-none rounded-xl border-2 border-cream bg-ink px-4 py-3 font-body text-base font-medium text-cream shadow-[3px_3px_0_#fcf7f8] outline-none placeholder:text-cream/40 focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-[transform,box-shadow] duration-150"

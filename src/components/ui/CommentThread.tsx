@@ -11,7 +11,7 @@ import {
 
 /* ---------- constants ---------- */
 
-const CHAR_MAX = 200;
+const CHAR_MAX = 500;
 
 const profanityFilter = new BadWords.Filter();
 
