@@ -4,6 +4,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/utils/cn";
+import { API_URL } from "@/lib/confessionsApi";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -46,7 +47,7 @@ export default function AccountPage({ auth }: { auth: ReturnType<typeof useAuth>
     try {
       const idToken = await auth.user?.getIdToken();
       if (!idToken) throw new Error("not logged in");
-      await fetch("/api/account", {
+      await fetch(`${API_URL}/account`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${idToken}` },
       });
@@ -71,7 +72,7 @@ export default function AccountPage({ auth }: { auth: ReturnType<typeof useAuth>
     setUsernameError(null);
     if (val.length < 3) return;
     try {
-      const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(val)}`);
+      const res = await fetch(`${API_URL}/auth/check-username?username=${encodeURIComponent(val)}`);
       const data = await res.json();
       setUsernameAvailable(data.available);
     } catch {
@@ -85,7 +86,7 @@ export default function AccountPage({ auth }: { auth: ReturnType<typeof useAuth>
     setUsernameError(null);
     try {
       const idToken = await auth.user.getIdToken();
-      const res = await fetch("/api/account/username", {
+      const res = await fetch(`${API_URL}/account/username`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

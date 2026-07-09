@@ -2,6 +2,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/utils/cn";
 import { useAuth } from "@/hooks/useAuth";
+import { API_URL } from "@/lib/confessionsApi";
 
 type Mode = "login" | "signup" | "reset";
 
@@ -97,7 +98,7 @@ export default function AuthModal({
       return;
     }
     try {
-      const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(val)}`);
+      const res = await fetch(`${API_URL}/auth/check-username?username=${encodeURIComponent(val)}`);
       const data = await res.json();
       setUsernameAvailable(data.available);
     } catch {
