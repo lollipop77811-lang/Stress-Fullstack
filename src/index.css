@@ -81,10 +81,26 @@
     background: var(--color-pink);
   }
 
-  /* Hide native cursor on fine-pointer (desktop) devices — custom cursor takes over */
+  /* Hide native cursor on fine-pointer (desktop) devices — custom cursor takes over.
+   * EXCEPT for text-input elements (textarea, input, contenteditable),
+   * where the native caret must stay visible so users can see exactly
+   * where they're editing. */
   @media (hover: hover) and (pointer: fine) {
     * {
       cursor: none !important;
+    }
+    textarea,
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="search"],
+    input[type="url"],
+    input[type="tel"],
+    input[type="number"],
+    input:not([type]),
+    [contenteditable="true"],
+    [contenteditable=""] {
+      cursor: text !important;
     }
   }
 
