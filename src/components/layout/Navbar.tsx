@@ -25,8 +25,7 @@ function Logo() {
         😤
       </span>
       <span className="font-display text-base font-extrabold leading-none tracking-tight sm:text-lg">
-        O<span className="text-pink">.</span>Stress
-        <span className="text-electric">Kal Ana</span>
+        O STRESS <span className="text-electric">KAL ANA</span>
       </span>
     </a>
   );
