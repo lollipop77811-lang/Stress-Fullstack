@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/utils/cn";
 import type { useAuth } from "@/hooks/useAuth";
+import logoIcon from "@/assets/logo-icon.png";
 
 const LINKS = [
   { label: "Home", href: "#top", hover: "TOP!" },
@@ -21,8 +22,8 @@ function Logo() {
       className="group flex shrink-0 items-center gap-2"
       aria-label="O STRESS KAL ANA — home"
     >
-      <span className="grid h-9 w-9 place-items-center rounded-lg border-2 border-jet bg-toxic font-display text-base font-extrabold shadow-brutal-sm transition-transform duration-200 group-hover:rotate-6 sm:h-10 sm:w-10 sm:text-lg">
-        😤
+      <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg border-2 border-jet bg-toxic shadow-brutal-sm transition-transform duration-200 group-hover:rotate-6 sm:h-10 sm:w-10">
+        <img src={logoIcon} alt="O Stress Kal Ana logo" className="h-full w-full object-cover" />
       </span>
       <span className="font-display text-base font-extrabold leading-none tracking-tight sm:text-lg">
         O STRESS <span className="text-electric">KAL ANA</span>
