@@ -267,7 +267,7 @@ export default function CommentThread({
           ↳ no comments yet. be the first to say something.
         </p>
       ) : (
-        <div className="space-y-3">
+        <div className="max-h-[40vh] space-y-3 overflow-y-auto pr-1">
           <AnimatePresence>
             {comments.map((c) => (
               <CommentItem

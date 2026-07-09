@@ -1094,7 +1094,7 @@ export default function ConfessionWall({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setOpen(null)}
-            className="fixed inset-0 z-[200] grid place-items-center bg-jet/80 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-[200] grid place-items-start overflow-y-auto bg-jet/80 p-3 backdrop-blur-sm sm:place-items-center sm:p-4"
           >
             <motion.div
               initial={{ scale: 0.4, rotate: -8, opacity: 0 }}
@@ -1102,7 +1102,7 @@ export default function ConfessionWall({
               exit={{ scale: 0.4, rotate: 8, opacity: 0 }}
               transition={{ type: "spring", stiffness: 260, damping: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-md p-8 sm:p-12"
+              className="relative w-full max-w-md p-6 sm:p-8 my-4 sm:my-0"
               style={{
                 backgroundColor: COLOR_MAP[open.color].bg,
                 color: COLOR_MAP[open.color].text,
