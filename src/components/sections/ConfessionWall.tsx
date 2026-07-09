@@ -719,14 +719,14 @@ export default function ConfessionWall({
                 <p className="mt-4 max-w-md font-hand text-xl font-bold text-cream/80 drop-shadow-[1px_1px_0_rgba(11,12,16,0.7)]">
                   be the first to pin something here. the bricks are listening.
                 </p>
-                <a
-                  href="#composer"
+                <button
+                  onClick={() => document.getElementById("composer")?.scrollIntoView({ behavior: "smooth" })}
                   data-hover="WRITE!"
                   className="mt-8 inline-flex items-center gap-2 rounded-xl border-2 border-jet bg-toxic px-7 py-4 font-display text-base font-bold uppercase tracking-tight text-jet shadow-[6px_6px_0_#0b0c10] transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-[8px_8px_0_#0b0c10] sm:text-lg"
                 >
                   <span className="animate-wiggle">✍️</span>
                   Write the first confession →
-                </a>
+                </button>
               </div>
             )}
 
@@ -938,13 +938,13 @@ export default function ConfessionWall({
           ★ my confessions
         </a>
         {/* Write your own — scrolls down to the composer */}
-        <a
-          href="#composer"
+        <button
+          onClick={() => document.getElementById("composer")?.scrollIntoView({ behavior: "smooth" })}
           data-hover="WRITE!"
           className="inline-flex items-center gap-1.5 rounded-xl border-2 border-jet bg-toxic px-3 py-2 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-[3px_3px_0_#0b0c10] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#0b0c10]"
         >
           ✍️ write yours ↓
-        </a>
+        </button>
       </div>
 
       {/* Flying note portal — rendered to document.body so it's not clipped
