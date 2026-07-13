@@ -71,7 +71,13 @@ export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthC
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ kind: "ok" | "err"; msg: string } | null>(null);
   const [showCrisis, setShowCrisis] = useState(false);
-  const [showClaimToast, setShowClaimToast] = useState(false);
+
+  // Auth gate: posting now requires a signed-in account.
+  // If Firebase isn't configured (e.g. dev without env), fall back to
+  // allowing anonymous posts so the wall still works locally.
+  const requiresAuth = !!auth?.firebaseEnabled;
+  const isLoggedIn = !!auth?.user && !!auth?.account;
+  const authBlocked = requiresAuth && !isLoggedIn;
 
   // Filter profanity on the way in (replace slurs with **** so user sees it)
   const filteredText = useMemo(() => {
@@ -84,7 +90,7 @@ export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthC
 
   const charCount = text.length;
   const remaining = CHAR_MAX - charCount;
-  const canSubmit = !submitting && text.trim().length >= CHAR_MIN;
+  const canSubmit = !submitting && !authBlocked && text.trim().length >= CHAR_MIN;
 
   const showToast = (kind: "ok" | "err", msg: string) => {
     setToast({ kind, msg });
@@ -94,6 +100,12 @@ export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthC
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
+    // Belt-and-suspenders: if auth is required and user isn't logged in,
+    // open the auth modal instead of submitting.
+    if (authBlocked) {
+      onAuthClick?.();
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -129,17 +141,6 @@ export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthC
             ? `stuck. 👍 wall ${result.actualWallIdx + 1} is fresh — you're the first to pin here.`
             : "stuck. 👍 your secret is now legally binding."
         );
-      }
-
-      // --- Post-confession "claim" toast ---
-      // Show once after first confession if NOT logged in
-      if (!auth?.user && auth?.firebaseEnabled) {
-        const claimKey = "osk.confessions.claimShown.v1";
-        if (!localStorage.getItem(claimKey)) {
-          localStorage.setItem(claimKey, "1");
-          setShowClaimToast(true);
-          setTimeout(() => setShowClaimToast(false), 12000);
-        }
       }
     } catch (err) {
       const msg =
@@ -208,6 +209,30 @@ export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthC
                 borderRight: "16px solid transparent",
               }}
             />
+
+            {/* Auth gate banner — shown when posting requires sign-in */}
+            {authBlocked && (
+              <div className="mb-5 rounded-xl border-2 border-jet bg-jet px-4 py-3 text-cream shadow-[3px_3px_0_#fcf7f8]">
+                <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex-1">
+                    <p className="font-display text-xs font-extrabold uppercase tracking-widest text-toxic">
+                      🔒 sign in required
+                    </p>
+                    <p className="mt-0.5 font-body text-sm text-cream/80">
+                      you need an account to pin a confession. it stays anonymous — the account is just to keep the wall safe.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onAuthClick?.()}
+                    data-hover="JOIN!"
+                    className="shrink-0 rounded-lg border-2 border-cream bg-toxic px-4 py-2 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-sm transition-transform hover:-translate-y-0.5"
+                  >
+                    Sign in →
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Mood + color pickers row */}
             <div className="mb-5 grid gap-4 sm:grid-cols-2">
@@ -323,13 +348,15 @@ export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthC
               <motion.button
                 type="submit"
                 disabled={!canSubmit}
-                data-hover="STICK!"
+                data-hover={authBlocked ? "SIGN IN!" : "STICK!"}
                 whileHover={canSubmit ? { x: 4, y: 4, boxShadow: "0px 0px 0px #0b0c10" } : undefined}
                 whileTap={canSubmit ? { scale: 0.97 } : undefined}
                 className={cn(
                   "inline-flex items-center justify-center gap-2 rounded-xl border-2 border-jet px-7 py-4 font-display text-base font-bold uppercase tracking-tight shadow-[6px_6px_0_#0b0c10] transition-[transform,box-shadow,opacity] duration-150 sm:text-lg",
                   canSubmit
                     ? "bg-pink text-cream"
+                    : authBlocked
+                    ? "bg-jet text-toxic"
                     : "cursor-not-allowed bg-cream/60 text-jet/40 opacity-70"
                 )}
               >
@@ -342,6 +369,11 @@ export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthC
                       ⏳
                     </motion.span>
                     Sticking…
+                  </>
+                ) : authBlocked ? (
+                  <>
+                    <span>🔒</span>
+                    Sign in to stick →
                   </>
                 ) : (
                   <>
@@ -384,56 +416,6 @@ export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthC
 
       {/* Crisis overlay — shown if the confession contained self-harm language */}
       <CrisisOverlay show={showCrisis} onClose={() => setShowCrisis(false)} />
-
-      {/* Post-confession "claim" toast — appears once after first confession */}
-      <AnimatePresence>
-        {showClaimToast && (
-          <motion.div
-            initial={{ opacity: 0, y: 30, x: "-50%" }}
-            animate={{ opacity: 1, y: 0, x: "-50%" }}
-            exit={{ opacity: 0, y: 30, x: "-50%" }}
-            transition={{ type: "spring", stiffness: 320, damping: 24 }}
-            className="fixed bottom-8 left-1/2 z-[350] w-[90%] max-w-md rounded-2xl border-[3px] border-jet bg-electric p-5 text-cream shadow-brutal-xl"
-          >
-            <div className="flex items-start gap-3">
-              <span className="text-3xl">🔄</span>
-              <div className="flex-1">
-                <h4 className="font-display text-base font-extrabold uppercase tracking-tight">
-                  Want to sync across devices?
-                </h4>
-                <p className="mt-1 font-body text-sm text-cream/80">
-                  Create a free account to access your "★ yours" confessions
-                  from any device. Confessions stay anonymous — the account
-                  is just for syncing.
-                </p>
-                <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={() => {
-                      setShowClaimToast(false);
-                      onAuthClick?.();
-                    }}
-                    className="rounded-lg border-2 border-jet bg-toxic px-4 py-2 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-sm transition-transform hover:-translate-y-0.5"
-                  >
-                    Create account →
-                  </button>
-                  <button
-                    onClick={() => setShowClaimToast(false)}
-                    className="rounded-lg border-2 border-cream/40 bg-transparent px-4 py-2 font-display text-xs font-bold uppercase tracking-tight text-cream/70"
-                  >
-                    No thanks
-                  </button>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowClaimToast(false)}
-                className="text-cream/50 hover:text-cream"
-              >
-                ✕
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </section>
   );
 }
