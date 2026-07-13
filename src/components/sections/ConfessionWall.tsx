@@ -1104,11 +1104,9 @@ export default function ConfessionWall({
             exit={{ opacity: 0 }}
             onClick={() => setOpen(null)}
             onWheel={(e) => {
-              // Prevent wheel from scrolling the background when the user
-              // wheels over the backdrop (not the modal itself).
-              if (e.target === e.currentTarget) {
-                e.preventDefault();
-              }
+              // Always block wheel on the backdrop so the background
+              // page never scrolls while the modal is open.
+              e.preventDefault();
             }}
             className="fixed inset-0 z-[200] flex items-center justify-center bg-jet/80 p-3 backdrop-blur-sm sm:p-4"
           >
@@ -1118,6 +1116,12 @@ export default function ConfessionWall({
               exit={{ scale: 0.4, rotate: 8, opacity: 0 }}
               transition={{ type: "spring", stiffness: 260, damping: 20 }}
               onClick={(e) => e.stopPropagation()}
+              onWheel={(e) => {
+                // Stop the wheel event from reaching the backdrop's
+                // preventDefault handler so the modal card can scroll
+                // its own content (comments, full text, etc.) freely.
+                e.stopPropagation();
+              }}
               className="relative m-auto w-full max-w-md max-h-[90vh] shrink-0 overflow-y-auto p-6 sm:p-8"
               style={{
                 backgroundColor: COLOR_MAP[open.color].bg,
