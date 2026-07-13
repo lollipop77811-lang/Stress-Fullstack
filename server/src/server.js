@@ -13,6 +13,7 @@ import commentRoutes from "./commentRoutes.js";
 import accountRoutes from "./accountRoutes.js";
 import adminRoutes from "./adminRoutes.js";
 import horoscopeRoutes from "./horoscopeRoutes.js";
+import whisperRoutes from "./whisperRoutes.js";
 
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI =
@@ -80,6 +81,7 @@ app.use("/api", commentRoutes);
 app.use("/api", accountRoutes);
 app.use("/api", adminRoutes);
 app.use("/api", horoscopeRoutes);
+app.use("/api", whisperRoutes);
 
 // 404
 app.use((_req, res) => {

@@ -4,6 +4,13 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Stamp from "@/components/ui/Stamp";
 import { cn } from "@/utils/cn";
+import type { useAuth } from "@/hooks/useAuth";
+import {
+  listWhispers,
+  createWhisper,
+  witnessWhisper,
+  type Whisper as ApiWhisper,
+} from "@/lib/confessionsApi";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -79,7 +86,7 @@ const MOODS: Mood[] = [
 ];
 
 type Whisper = {
-  id: number;
+  id: string;
   text: string;
   mood: MoodId;
   witnesses: number;
@@ -87,23 +94,8 @@ type Whisper = {
   createdAt: number; // epoch ms
   ttl: number; // ms remaining at createdAt (default 24h)
   dissolved: boolean;
+  isMine?: boolean;
 };
-
-const TTL_24H = 24 * 60 * 60 * 1000;
-const WITNESS_THRESHOLD = 100;
-
-const KIND_NOTES = [
-  "you survived every bad day so far. that's a 100% win rate. keep going, you absolute legend.",
-  "the version of you reading this is doing better than you think. fr.",
-  "future you is gonna be so proud of present you. even if present you is just lying down.",
-  "hydrating counts as self-care. so does breathing. you're crushing it.",
-  "you don't have to win today. you just have to show up. which you did. hi.",
-  "the void says hi back. it's rooting for you. weird, but true.",
-  "nobody has it together. they're just better at pretending. you're fine.",
-  "every storm runs out of rain. even the dramatic ones. even yours.",
-  "rest is productive. saying no is productive. lying on the floor counts.",
-  "you are not behind. you are exactly here. that's enough for today.",
-];
 
 /* ---------- helpers ---------- */
 
@@ -121,29 +113,60 @@ const fmtRemaining = (ms: number): string => {
   return `${s}s`;
 };
 
-const STORAGE_KEY = "osk.whispers.v1";
+/* ---------- session id (for witness dedup on server) ---------- */
 
-/* ---------- seed whispers ---------- */
+function getSessionId(): string {
+  try {
+    let id = localStorage.getItem("osk.sessionId.v1");
+    if (!id) {
+      id = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem("osk.sessionId.v1", id);
+    }
+    return id;
+  } catch {
+    return "anon-" + Math.random().toString(36).slice(2);
+  }
+}
 
-const now = Date.now();
-const SEED: Whisper[] = [
-  { id: 4740, text: "I have a recurring nightmare where I'm late for an exam I never signed up for. I graduated in 2017.", mood: "boom", witnesses: 178, witnessed: false, createdAt: now - 11 * 3600_000, ttl: TTL_24H, dissolved: false },
-  { id: 4735, text: "I told my houseplant I'd water it tomorrow. It is now day 9 of 'tomorrow'. We don't make eye contact.", mood: "plead", witnesses: 62, witnessed: false, createdAt: now - 12 * 60_000, ttl: TTL_24H, dissolved: false },
-  { id: 4731, text: "Replied 'no worries!' to an email that contained many worries. I am the worries now.", mood: "skull", witnesses: 89, witnessed: false, createdAt: now - 5 * 3600_000, ttl: TTL_24H, dissolved: false },
-  { id: 4729, text: "I've been pretending to understand my job for 3 years. Nobody has noticed. The fear is constant.", mood: "wilt", witnesses: 47, witnessed: false, createdAt: now - 2 * 3600_000, ttl: TTL_24H, dissolved: false },
-  { id: 4725, text: "I rehearse phone calls out loud before making them. Even the ones to my mom. Especially those.", mood: "burn", witnesses: 134, witnessed: false, createdAt: now - 23.95 * 3600_000, ttl: TTL_24H, dissolved: false },
-  { id: 4612, text: '"you survived every bad day so far. that\'s a 100% win rate. keep going, you absolute legend."', mood: "no", witnesses: 211, witnessed: false, createdAt: now - 26 * 3600_000, ttl: TTL_24H, dissolved: true },
-];
+/* Local set of whisper IDs this session has witnessed (for optimistic UI). */
+const WITNESSED_KEY = "osk.whispers.witnessed.v1";
+function loadWitnessedSet(): Set<string> {
+  try {
+    const raw = localStorage.getItem(WITNESSED_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr)) return new Set(arr.filter((x) => typeof x === "string"));
+  } catch { /* ignore */ }
+  return new Set();
+}
+function saveWitnessedSet(set: Set<string>) {
+  try { localStorage.setItem(WITNESSED_KEY, JSON.stringify([...set])); } catch { /* ignore */ }
+}
 
 /* ---------- component ---------- */
 
-export default function WhisperWall() {
+export default function WhisperWall({
+  auth,
+  onAuthClick,
+}: {
+  auth?: ReturnType<typeof useAuth>;
+  onAuthClick?: () => void;
+}) {
   const root = useRef<HTMLDivElement>(null);
   const [mood, setMood] = useState<MoodId>("wilt");
   const [text, setText] = useState("");
-  const [whispers, setWhispers] = useState<Whisper[]>(SEED);
+  const [whispers, setWhispers] = useState<Whisper[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0); // forces re-render for countdowns
-  const [nextId, setNextId] = useState(4750);
+  const sessionIdRef = useRef<string>(getSessionId());
+  const witnessedRef = useRef<Set<string>>(loadWitnessedSet());
+
+  // Auth gate: posting requires sign-in
+  const requiresAuth = !!auth?.firebaseEnabled;
+  const isLoggedIn = !!auth?.user && !!auth?.account;
+  const authBlocked = requiresAuth && !isLoggedIn;
 
   // --- Typing-reacts state ---
   const [wobbleKey, setWobbleKey] = useState(0); // increments on each keystroke to trigger wobble
@@ -233,30 +256,69 @@ export default function WhisperWall() {
     return () => ctx.revert();
   }, []);
 
-  /* Load from localStorage */
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Whisper[];
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        setWhispers(parsed);
-        const maxId = parsed.reduce((m, w) => Math.max(m, w.id), 0);
-        setNextId(maxId + 1);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  /* Convert API whisper → local Whisper type */
+  const apiToLocal = useCallback(
+    (w: ApiWhisper): Whisper => {
+      const createdAtMs = new Date(w.createdAt).getTime();
+      const expiresAtMs = new Date(w.expiresAt).getTime();
+      const ttl = Math.max(0, expiresAtMs - createdAtMs);
+      const witnessed = witnessedRef.current.has(w.id);
+      return {
+        id: w.id,
+        text: w.text,
+        mood: w.mood as MoodId,
+        witnesses: w.witnesses,
+        witnessed,
+        createdAt: createdAtMs,
+        ttl,
+        dissolved: w.dissolved,
+        isMine: w.isMine,
+      };
+    },
+    []
+  );
 
-  /* Persist to localStorage */
+  /* Fetch whispers from backend on mount + when auth state changes.
+   * If logged in, merge the public feed with the user's own whispers
+   * (cross-device sync — shows whispers from all their devices). */
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(whispers));
-    } catch {
-      /* ignore */
-    }
-  }, [whispers]);
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      try {
+        const idToken = auth?.user ? await auth.user.getIdToken() : undefined;
+        // Fetch public feed
+        const pubRes = await listWhispers(idToken);
+        let all = pubRes.whispers;
+
+        // If logged in, also fetch user's own whispers (cross-device sync)
+        if (idToken) {
+          try {
+            const mineRes = await listWhispers(idToken, true);
+            // Merge: own whispers not already in the public feed
+            const existingIds = new Set(all.map((w) => w.id));
+            for (const w of mineRes.whispers) {
+              if (!existingIds.has(w.id)) all.push(w);
+            }
+          } catch {
+            // mine fetch failed — non-fatal, continue with public feed
+          }
+        }
+
+        if (cancelled) return;
+        // Sort by createdAt desc
+        all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setWhispers(all.map(apiToLocal));
+        setError(null);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "couldn't reach the void.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [auth?.user, apiToLocal]);
 
   /* Countdown tick — every 1s */
   useEffect(() => {
@@ -264,56 +326,111 @@ export default function WhisperWall() {
     return () => window.clearInterval(i);
   }, []);
 
-  /* Auto-dissolve expired / over-witnessed */
+  /* Client-side cleanup: hide whispers whose TTL has fully expired.
+   * The backend's MongoDB TTL index will delete them server-side, but
+   * this keeps the UI tidy in real-time without waiting for a refetch. */
   useEffect(() => {
     setWhispers((prev) =>
-      prev.map((w) => {
-        if (w.dissolved) return w;
-        const remaining = w.ttl - (Date.now() - w.createdAt);
-        if (remaining <= 0 || w.witnesses >= WITNESS_THRESHOLD) {
-          return {
-            ...w,
-            dissolved: true,
-            text: KIND_NOTES[w.id % KIND_NOTES.length],
-            mood: "no",
-          };
-        }
-        return w;
+      prev.filter((w) => {
+        if (w.dissolved) return true; // keep dissolved (kind note) until refetch
+        const rem = w.ttl - (Date.now() - w.createdAt);
+        return rem > 0;
       })
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tick]);
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const t = text.trim();
     if (!t) return;
-    const w: Whisper = {
-      id: nextId,
-      text: t,
-      mood,
-      witnesses: 0,
-      witnessed: false,
-      createdAt: Date.now(),
-      ttl: TTL_24H,
-      dissolved: false,
-    };
-    setWhispers((prev) => [w, ...prev]);
-    setNextId((n) => n + 1);
-    setText("");
+    // Auth gate — if sign-in required and user isn't logged in, open auth modal
+    if (authBlocked) {
+      onAuthClick?.();
+      return;
+    }
+    if (!auth?.user) {
+      setError("you need to be signed in to whisper.");
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+    try {
+      const idToken = await auth.user.getIdToken();
+      const result = await createWhisper(idToken, {
+        text: t,
+        mood,
+        author: auth.account?.username,
+      });
+      // Optimistically add to the top of the list
+      setWhispers((prev) => [apiToLocal(result.whisper), ...prev]);
+      setText("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "couldn't send whisper. try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const witness = (id: number) => {
+  const witness = async (id: string) => {
+    // Optimistic UI update
+    const wasWitnessed = witnessedRef.current.has(id);
     setWhispers((prev) =>
       prev.map((w) => {
         if (w.id !== id || w.dissolved) return w;
         return {
           ...w,
-          witnesses: w.witnessed ? w.witnesses - 1 : w.witnesses + 1,
-          witnessed: !w.witnessed,
+          witnesses: wasWitnessed ? w.witnesses - 1 : w.witnesses + 1,
+          witnessed: !wasWitnessed,
         };
       })
     );
+
+    // Update local witnessed set
+    const newSet = new Set(witnessedRef.current);
+    if (wasWitnessed) newSet.delete(id);
+    else newSet.add(id);
+    witnessedRef.current = newSet;
+    saveWitnessedSet(newSet);
+
+    // Sync with server
+    try {
+      const result = await witnessWhisper(id, sessionIdRef.current);
+      // Server may have dissolved the whisper (threshold reached)
+      setWhispers((prev) =>
+        prev.map((w) => {
+          if (w.id !== id) return w;
+          return {
+            ...w,
+            witnesses: result.witnesses,
+            witnessed: result.witnessed,
+            dissolved: result.dissolved,
+            text: result.dissolved ? result.text : w.text,
+            mood: result.dissolved ? (result.mood as MoodId) : w.mood,
+          };
+        })
+      );
+    } catch (err) {
+      // Roll back optimistic update
+      const rollbackSet = new Set(witnessedRef.current);
+      if (wasWitnessed) rollbackSet.add(id);
+      else rollbackSet.delete(id);
+      witnessedRef.current = rollbackSet;
+      saveWitnessedSet(rollbackSet);
+      setWhispers((prev) =>
+        prev.map((w) => {
+          if (w.id !== id || w.dissolved) return w;
+          return {
+            ...w,
+            witnesses: wasWitnessed ? w.witnesses + 1 : w.witnesses - 1,
+            witnessed: wasWitnessed,
+          };
+        })
+      );
+      setError("couldn't witness. try again.");
+      setTimeout(() => setError(null), 3000);
+    }
   };
 
   const remaining = (w: Whisper): number =>
@@ -479,29 +596,99 @@ export default function WhisperWall() {
 
               <motion.button
                 type="submit"
-                disabled={!text.trim()}
-                data-hover="SEND!"
+                disabled={!text.trim() || submitting || authBlocked}
+                data-hover={authBlocked ? "SIGN IN!" : "SEND!"}
                 whileHover={
-                  text.trim()
+                  text.trim() && !submitting && !authBlocked
                     ? { x: 4, y: 4, boxShadow: "0px 0px 0px #f72585" }
                     : undefined
                 }
-                whileTap={text.trim() ? { scale: 0.97 } : undefined}
+                whileTap={text.trim() && !submitting && !authBlocked ? { scale: 0.97 } : undefined}
                 className={cn(
                   "inline-flex items-center justify-center gap-2 rounded-xl border-2 border-jet px-7 py-4 font-display text-base font-bold uppercase tracking-tight shadow-[6px_6px_0_#f72585] transition-[transform,box-shadow,opacity] duration-150 sm:text-lg",
-                  text.trim()
+                  text.trim() && !submitting && !authBlocked
                     ? "bg-toxic text-jet"
+                    : authBlocked
+                    ? "bg-jet text-toxic"
                     : "cursor-not-allowed bg-ink text-cream/40 opacity-70"
                 )}
               >
-                <span className="animate-wiggle">📣</span>
-                Send into the void
+                {submitting ? (
+                  <>
+                    <motion.span
+                      animate={{ rotate: 360 }}
+                      transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                    >
+                      ⏳
+                    </motion.span>
+                    Sending…
+                  </>
+                ) : authBlocked ? (
+                  <>
+                    <span>🔒</span>
+                    Sign in to whisper →
+                  </>
+                ) : (
+                  <>
+                    <span className="animate-wiggle">📣</span>
+                    Send into the void
+                  </>
+                )}
               </motion.button>
             </div>
+
+            {/* Auth gate banner — shown when whispering requires sign-in */}
+            {authBlocked && (
+              <div className="mt-4 rounded-xl border-2 border-cream bg-jet px-4 py-3 text-cream shadow-[3px_3px_0_#f72585]">
+                <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex-1">
+                    <p className="font-display text-xs font-extrabold uppercase tracking-widest text-toxic">
+                      🔒 sign in required
+                    </p>
+                    <p className="mt-0.5 font-body text-sm text-cream/80">
+                      you need an account to whisper. it stays anonymous — the account syncs your whispers across devices.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onAuthClick?.()}
+                    data-hover="JOIN!"
+                    className="shrink-0 rounded-lg border-2 border-cream bg-toxic px-4 py-2 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-sm transition-transform hover:-translate-y-0.5"
+                  >
+                    Sign in →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Error toast */}
+            {error && (
+              <p className="mt-3 font-hand text-sm font-bold text-pink">
+                ⚠️ {error}
+              </p>
+            )}
           </div>
         </form>
 
         {/* Whispers grid */}
+        {loading ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <motion.span
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+              className="text-5xl"
+            >
+              ⏳
+            </motion.span>
+          </div>
+        ) : whispers.length === 0 ? (
+          <div className="flex min-h-[200px] flex-col items-center justify-center text-center">
+            <span className="text-6xl mb-4">🌌</span>
+            <p className="font-hand text-xl font-bold text-cream/70">
+              the void is empty. be the first to whisper.
+            </p>
+          </div>
+        ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence mode="popLayout">
             {whispers.map((w) => {
@@ -597,6 +784,7 @@ export default function WhisperWall() {
             })}
           </AnimatePresence>
         </div>
+        )}
 
         {/* Footnote */}
         <p className="wh-reveal mt-8 text-center font-hand text-lg font-bold text-cream/55">

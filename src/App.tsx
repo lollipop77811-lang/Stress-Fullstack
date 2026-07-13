@@ -73,8 +73,18 @@ function HomePage() {
   );
 }
 
-function WhisperPage() {
-  return <div className="bg-jet"><WhisperWall /></div>;
+function WhisperPage({
+  auth,
+  onAuthClick,
+}: {
+  auth: ReturnType<typeof useAuth>;
+  onAuthClick: () => void;
+}) {
+  return (
+    <div className="bg-jet">
+      <WhisperWall auth={auth} onAuthClick={onAuthClick} />
+    </div>
+  );
 }
 
 function MinePage() {
@@ -222,7 +232,7 @@ export default function App() {
 
         <main className="flex-1">
           {route === "whisper" ? (
-            <WhisperPage />
+            <WhisperPage auth={auth} onAuthClick={() => setShowAuthModal(true)} />
           ) : route === "wall" ? (
             <WallPage
               displayN={wallDisplayN ?? 1}

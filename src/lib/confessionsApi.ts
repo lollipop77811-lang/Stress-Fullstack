@@ -348,3 +348,83 @@ export async function reportComment(
 }
 
 export { API_URL };
+
+/* ============================================================
+   WHISPERS — ephemeral 24h anonymous messages
+   ============================================================ */
+
+export type WhisperMood = "wilt" | "plead" | "boom" | "skull" | "burn" | "no";
+
+export type Whisper = {
+  id: string;
+  text: string;
+  author: string;
+  mood: WhisperMood;
+  witnesses: number;
+  createdAt: string;
+  expiresAt: string;
+  dissolved: boolean;
+  isMine?: boolean;
+};
+
+export type WhisperListResponse = {
+  whispers: Whisper[];
+};
+
+export type WhisperWitnessResponse = {
+  witnesses: number;
+  witnessed: boolean;
+  dissolved: boolean;
+  text: string;
+  mood: WhisperMood;
+};
+
+/**
+ * GET /api/whispers — list active whispers (public).
+ * Pass idToken + mine=1 to fetch only the current user's whispers
+ * (used for cross-device sync).
+ */
+export async function listWhispers(
+  idToken?: string,
+  mineOnly = false
+): Promise<WhisperListResponse> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (idToken) headers.Authorization = `Bearer ${idToken}`;
+  const url = `${API_URL}/whispers${mineOnly ? "?mine=1" : ""}`;
+  const res = await fetch(url, { headers });
+  return handle<WhisperListResponse>(res);
+}
+
+/**
+ * POST /api/whispers — create a whisper. Requires auth.
+ */
+export async function createWhisper(
+  idToken: string,
+  body: { text: string; mood: WhisperMood; author?: string }
+): Promise<{ whisper: Whisper }> {
+  const res = await fetch(`${API_URL}/whispers`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify(body),
+  });
+  return handle<{ whisper: Whisper }>(res);
+}
+
+/**
+ * POST /api/whispers/:id/witness — witness a whisper (dedup by session).
+ */
+export async function witnessWhisper(
+  whisperId: string,
+  sessionId: string
+): Promise<WhisperWitnessResponse> {
+  const res = await fetch(`${API_URL}/whispers/${whisperId}/witness`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ sessionId }),
+  });
+  return handle<WhisperWitnessResponse>(res);
+}
