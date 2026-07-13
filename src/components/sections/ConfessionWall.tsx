@@ -721,11 +721,17 @@ export default function ConfessionWall({
       if (e.key === "Escape") setOpen(null);
     };
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
+    // Lock BOTH body and html — in many setups the page scrolls on
+    // documentElement (html), not body, so locking body alone isn't
+    // enough and the background wall keeps scrolling under the modal.
+    const prevBody = document.body.style.overflow;
+    const prevHtml = document.documentElement.style.overflow;
     document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      document.body.style.overflow = prevBody;
+      document.documentElement.style.overflow = prevHtml;
     };
   }, [open]);
 
@@ -1102,7 +1108,7 @@ export default function ConfessionWall({
               exit={{ scale: 0.4, rotate: 8, opacity: 0 }}
               transition={{ type: "spring", stiffness: 260, damping: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative m-auto w-full max-w-md p-6 sm:p-8"
+              className="relative m-auto w-full max-w-md shrink-0 p-6 sm:p-8"
               style={{
                 backgroundColor: COLOR_MAP[open.color].bg,
                 color: COLOR_MAP[open.color].text,
