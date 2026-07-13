@@ -1092,7 +1092,10 @@ export default function ConfessionWall({
           document.body
         )}
 
-      {/* Enlarge modal */}
+      {/* Enlarge modal — portaled to document.body so it's outside the
+          wall section's overflow:hidden and any ancestor transforms
+          (GSAP/framer-motion) that would break position:fixed. */}
+      {createPortal(
       <AnimatePresence>
         {open && (
           <motion.div
@@ -1100,6 +1103,13 @@ export default function ConfessionWall({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setOpen(null)}
+            onWheel={(e) => {
+              // Prevent wheel from scrolling the background when the user
+              // wheels over the backdrop (not the modal itself).
+              if (e.target === e.currentTarget) {
+                e.preventDefault();
+              }
+            }}
             className="fixed inset-0 z-[200] flex items-center justify-center bg-jet/80 p-3 backdrop-blur-sm sm:p-4"
           >
             <motion.div
@@ -1232,6 +1242,7 @@ export default function ConfessionWall({
           </motion.div>
         )}
       </AnimatePresence>
+      , document.body)}
 
       {/* Report modal */}
       <ReportModal
