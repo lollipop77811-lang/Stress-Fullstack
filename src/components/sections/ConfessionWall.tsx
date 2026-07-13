@@ -1100,7 +1100,7 @@ export default function ConfessionWall({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setOpen(null)}
-            className="fixed inset-0 z-[200] flex justify-center overflow-y-auto bg-jet/80 p-3 backdrop-blur-sm sm:p-4"
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-jet/80 p-3 backdrop-blur-sm sm:p-4"
           >
             <motion.div
               initial={{ scale: 0.4, rotate: -8, opacity: 0 }}
@@ -1108,11 +1108,12 @@ export default function ConfessionWall({
               exit={{ scale: 0.4, rotate: 8, opacity: 0 }}
               transition={{ type: "spring", stiffness: 260, damping: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative m-auto w-full max-w-md shrink-0 p-6 sm:p-8"
+              className="relative m-auto w-full max-w-md max-h-[90vh] shrink-0 overflow-y-auto p-6 sm:p-8"
               style={{
                 backgroundColor: COLOR_MAP[open.color].bg,
                 color: COLOR_MAP[open.color].text,
                 boxShadow: "12px 12px 0 rgba(11,12,16,0.6)",
+                overscrollBehavior: "contain",
                 clipPath: open.aging === "torn"
                   ? "polygon(0 0, 88% 0, 96% 6%, 100% 4%, 100% 100%, 0 100%)"
                   : undefined,
