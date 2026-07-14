@@ -84,12 +84,32 @@ async function requireAuth(req, res, next) {
 }
 
 /**
+ * Optional-auth middleware: if an Authorization header is present, verify
+ * the token and attach req.firebaseUser. If not, continue without auth
+ * (anonymous whisper). Errors on invalid tokens are ignored so anonymous
+ * posting still works even if a stale token is sent.
+ */
+async function optionalAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ") || !firebaseAuth) {
+    return next();
+  }
+  try {
+    const idToken = authHeader.slice("Bearer ".length);
+    req.firebaseUser = await firebaseAuth.verifyIdToken(idToken);
+  } catch {
+    // Invalid/expired token — continue as anonymous
+  }
+  next();
+}
+
+/**
  * GET /api/whispers
  * Lists active (non-expired, non-dissolved) whispers, newest first.
- * Also includes the current user's own whispers (even if dissolved) so
- * they can see their history.
  *
- * Query: ?mine=1 — return only the current user's whispers (cross-device sync)
+ * Query: ?mine=1 — return only the current user's whispers
+ *   - If authed: filter by firebaseUid (cross-device sync)
+ *   - If anon:   filter by sessionId (same-browser only)
  *
  * No auth required to view (whispers are public).
  */
@@ -100,24 +120,26 @@ router.get("/whispers", listLimiter, async (req, res) => {
 
     let query;
     if (mineOnly) {
-      // Return user's own whispers — requires auth
-      if (!req.firebaseUser) {
-        // No auth header — try to extract token manually for the mine=1 case
-        const authHeader = req.headers.authorization;
-        if (authHeader && authHeader.startsWith("Bearer ") && firebaseAuth) {
-          try {
-            const decoded = await firebaseAuth.verifyIdToken(
-              authHeader.slice("Bearer ".length)
-            );
-            req.firebaseUser = decoded;
-          } catch {
-            return res.status(401).json({ error: "invalid or expired token" });
-          }
-        } else {
-          return res.status(401).json({ error: "auth required for mine=1" });
+      // Try to auth the user
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith("Bearer ") && firebaseAuth) {
+        try {
+          const decoded = await firebaseAuth.verifyIdToken(authHeader.slice("Bearer ".length));
+          req.firebaseUser = decoded;
+        } catch {
+          /* ignore — treat as anon */
         }
       }
-      query = { firebaseUid: req.firebaseUser.uid };
+      if (req.firebaseUser) {
+        query = { firebaseUid: req.firebaseUser.uid };
+      } else {
+        // Anonymous — need a sessionId from query
+        const sid = typeof req.query.sessionId === "string" ? req.query.sessionId : null;
+        if (!sid) {
+          return res.json({ whispers: [] });
+        }
+        query = { sessionId: sid };
+      }
     } else {
       // Public feed — active + not dissolved
       query = {
@@ -141,7 +163,9 @@ router.get("/whispers", listLimiter, async (req, res) => {
         createdAt: w.createdAt.toISOString(),
         expiresAt: w.expiresAt.toISOString(),
         dissolved: w.dissolved,
-        isMine: req.firebaseUser ? w.firebaseUid === req.firebaseUser.uid : false,
+        isMine: req.firebaseUser
+          ? w.firebaseUid === req.firebaseUser.uid
+          : false,
       })),
     });
   } catch (err) {
@@ -152,13 +176,16 @@ router.get("/whispers", listLimiter, async (req, res) => {
 
 /**
  * POST /api/whispers
- * Creates a new whisper. Requires auth.
+ * Creates a new whisper. Auth is OPTIONAL — anyone can whisper.
  *
- * Headers: Authorization: Bearer <token>
- * Body: { text, mood, author? }
+ * Headers (optional): Authorization: Bearer <token>
+ *   - If present: whisper is linked to firebaseUid (cross-device sync)
+ *   - If absent:  whisper is linked to sessionId (this browser only)
+ *
+ * Body: { text, mood, author?, sessionId? }
  */
-router.post("/whispers", createLimiter, requireAuth, async (req, res) => {
-  const { text, mood, author } = req.body ?? {};
+router.post("/whispers", createLimiter, optionalAuth, async (req, res) => {
+  const { text, mood, author, sessionId } = req.body ?? {};
 
   // --- validation ---
   if (typeof text !== "string" || text.trim().length < WHISPER_MIN_LENGTH) {
@@ -174,21 +201,26 @@ router.post("/whispers", createLimiter, requireAuth, async (req, res) => {
   }
 
   try {
-    // Look up the account to get the username for the author field
-    const account = await Account.findOne({
-      firebaseUid: req.firebaseUser.uid,
-    }).lean();
-
-    const safeAuthor =
-      typeof author === "string" && author.trim().length > 0
-        ? author.trim().slice(0, 30)
-        : account?.username || "anon";
+    // If signed in, look up the account for the username
+    let safeAuthor = "anon";
+    if (req.firebaseUser) {
+      const account = await Account.findOne({
+        firebaseUid: req.firebaseUser.uid,
+      }).lean();
+      safeAuthor =
+        typeof author === "string" && author.trim().length > 0
+          ? author.trim().slice(0, 30)
+          : account?.username || "anon";
+    } else if (typeof author === "string" && author.trim().length > 0) {
+      safeAuthor = author.trim().slice(0, 30);
+    }
 
     const whisper = await Whisper.create({
       text: text.trim(),
       author: safeAuthor,
       mood: mood || "wilt",
-      firebaseUid: req.firebaseUser.uid,
+      firebaseUid: req.firebaseUser ? req.firebaseUser.uid : null,
+      sessionId: req.firebaseUser ? null : (typeof sessionId === "string" ? sessionId : null),
       witnessCount: 0,
       witnessedBy: [],
       dissolved: false,

@@ -163,10 +163,9 @@ export default function WhisperWall({
   const sessionIdRef = useRef<string>(getSessionId());
   const witnessedRef = useRef<Set<string>>(loadWitnessedSet());
 
-  // Auth gate: posting requires sign-in
-  const requiresAuth = !!auth?.firebaseEnabled;
+  // Auth state — used to decide whether to send idToken (for cross-device
+  // sync). Posting is ALWAYS allowed; sign-in is only needed for sync.
   const isLoggedIn = !!auth?.user && !!auth?.account;
-  const authBlocked = requiresAuth && !isLoggedIn;
 
   // --- Typing-reacts state ---
   const [wobbleKey, setWobbleKey] = useState(0); // increments on each keystroke to trigger wobble
@@ -279,8 +278,11 @@ export default function WhisperWall({
   );
 
   /* Fetch whispers from backend on mount + when auth state changes.
-   * If logged in, merge the public feed with the user's own whispers
-   * (cross-device sync — shows whispers from all their devices). */
+   * - Public feed: always fetched (visible to everyone).
+   * - If signed in: also fetch user's own whispers by firebaseUid
+   *   (cross-device sync — shows whispers from all their devices).
+   * - If anonymous: also fetch this browser's whispers by sessionId
+   *   (so the user can still see their own recent whispers here). */
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -291,18 +293,18 @@ export default function WhisperWall({
         const pubRes = await listWhispers(idToken);
         let all = pubRes.whispers;
 
-        // If logged in, also fetch user's own whispers (cross-device sync)
-        if (idToken) {
-          try {
-            const mineRes = await listWhispers(idToken, true);
-            // Merge: own whispers not already in the public feed
-            const existingIds = new Set(all.map((w) => w.id));
-            for (const w of mineRes.whispers) {
-              if (!existingIds.has(w.id)) all.push(w);
-            }
-          } catch {
-            // mine fetch failed — non-fatal, continue with public feed
+        // Also fetch this user/browser's own whispers
+        try {
+          const mineRes = idToken
+            ? await listWhispers(idToken, true)
+            : await listWhispers(undefined, true, sessionIdRef.current);
+          // Merge: own whispers not already in the public feed
+          const existingIds = new Set(all.map((w) => w.id));
+          for (const w of mineRes.whispers) {
+            if (!existingIds.has(w.id)) all.push(w);
           }
+        } catch {
+          // mine fetch failed — non-fatal, continue with public feed
         }
 
         if (cancelled) return;
@@ -344,25 +346,22 @@ export default function WhisperWall({
     e.preventDefault();
     const t = text.trim();
     if (!t) return;
-    // Auth gate — if sign-in required and user isn't logged in, open auth modal
-    if (authBlocked) {
-      onAuthClick?.();
-      return;
-    }
-    if (!auth?.user) {
-      setError("you need to be signed in to whisper.");
-      return;
-    }
 
     setSubmitting(true);
     setError(null);
     try {
-      const idToken = await auth.user.getIdToken();
-      const result = await createWhisper(idToken, {
-        text: t,
-        mood,
-        author: auth.account?.username,
-      });
+      // If signed in, send idToken (enables cross-device sync).
+      // If not, send sessionId so this browser can still see its own whispers.
+      const idToken = auth?.user ? await auth.user.getIdToken() : undefined;
+      const result = await createWhisper(
+        {
+          text: t,
+          mood,
+          author: auth?.account?.username,
+          sessionId: idToken ? undefined : sessionIdRef.current,
+        },
+        idToken
+      );
       // Optimistically add to the top of the list
       setWhispers((prev) => [apiToLocal(result.whisper), ...prev]);
       setText("");
@@ -596,20 +595,18 @@ export default function WhisperWall({
 
               <motion.button
                 type="submit"
-                disabled={!text.trim() || submitting || authBlocked}
-                data-hover={authBlocked ? "SIGN IN!" : "SEND!"}
+                disabled={!text.trim() || submitting}
+                data-hover="SEND!"
                 whileHover={
-                  text.trim() && !submitting && !authBlocked
+                  text.trim() && !submitting
                     ? { x: 4, y: 4, boxShadow: "0px 0px 0px #f72585" }
                     : undefined
                 }
-                whileTap={text.trim() && !submitting && !authBlocked ? { scale: 0.97 } : undefined}
+                whileTap={text.trim() && !submitting ? { scale: 0.97 } : undefined}
                 className={cn(
                   "inline-flex items-center justify-center gap-2 rounded-xl border-2 border-jet px-7 py-4 font-display text-base font-bold uppercase tracking-tight shadow-[6px_6px_0_#f72585] transition-[transform,box-shadow,opacity] duration-150 sm:text-lg",
-                  text.trim() && !submitting && !authBlocked
+                  text.trim() && !submitting
                     ? "bg-toxic text-jet"
-                    : authBlocked
-                    ? "bg-jet text-toxic"
                     : "cursor-not-allowed bg-ink text-cream/40 opacity-70"
                 )}
               >
@@ -623,11 +620,6 @@ export default function WhisperWall({
                     </motion.span>
                     Sending…
                   </>
-                ) : authBlocked ? (
-                  <>
-                    <span>🔒</span>
-                    Sign in to whisper →
-                  </>
                 ) : (
                   <>
                     <span className="animate-wiggle">📣</span>
@@ -637,27 +629,25 @@ export default function WhisperWall({
               </motion.button>
             </div>
 
-            {/* Auth gate banner — shown when whispering requires sign-in */}
-            {authBlocked && (
-              <div className="mt-4 rounded-xl border-2 border-cream bg-jet px-4 py-3 text-cream shadow-[3px_3px_0_#f72585]">
-                <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex-1">
-                    <p className="font-display text-xs font-extrabold uppercase tracking-widest text-toxic">
-                      🔒 sign in required
-                    </p>
-                    <p className="mt-0.5 font-body text-sm text-cream/80">
-                      you need an account to whisper. it stays anonymous — the account syncs your whispers across devices.
-                    </p>
-                  </div>
+            {/* Sync hint — shown only when NOT signed in. Encourages the
+                user to sign in BEFORE writing if they want cross-device
+                sync. Signed-in whispers sync to all their devices;
+                anonymous whispers stay on this browser only. */}
+            {auth?.firebaseEnabled && !isLoggedIn && (
+              <div className="mt-4 flex flex-col items-start gap-2 rounded-xl border-2 border-cream/30 bg-ink/60 px-4 py-3 text-cream/80 sm:flex-row sm:items-center sm:justify-between">
+                <p className="font-body text-sm">
+                  📱 want to see your whispers on all your devices?{" "}
                   <button
                     type="button"
                     onClick={() => onAuthClick?.()}
-                    data-hover="JOIN!"
-                    className="shrink-0 rounded-lg border-2 border-cream bg-toxic px-4 py-2 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-sm transition-transform hover:-translate-y-0.5"
+                    className="font-display text-xs font-bold uppercase tracking-tight text-toxic underline-offset-2 hover:underline"
                   >
-                    Sign in →
+                    Sign in first →
                   </button>
-                </div>
+                </p>
+                <span className="font-hand text-xs text-cream/50">
+                  (sign in before writing to sync)
+                </span>
               </div>
             )}
 

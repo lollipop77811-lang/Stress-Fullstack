@@ -41,11 +41,19 @@ const whisperSchema = new mongoose.Schema(
       enum: ALLOWED_MOODS,
       default: "wilt",
     },
-    /** Firebase UID of the account that created this whisper. Used for
-     *  cross-device sync (account's whispers are visible on all devices). */
+    /** Firebase UID of the account that created this whisper. Set when
+     *  the user is signed in — enables cross-device sync. Null for
+     *  anonymous whispers (tied to sessionId instead). */
     firebaseUid: {
       type: String,
-      required: true,
+      default: null,
+      index: true,
+    },
+    /** Browser session ID for anonymous whispers. Used so a device can
+     *  see its own anonymous whispers without an account. */
+    sessionId: {
+      type: String,
+      default: null,
       index: true,
     },
     /** Number of times this whisper has been witnessed. */

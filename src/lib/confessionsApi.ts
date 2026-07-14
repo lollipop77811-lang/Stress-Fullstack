@@ -382,33 +382,42 @@ export type WhisperWitnessResponse = {
 /**
  * GET /api/whispers — list active whispers (public).
  * Pass idToken + mine=1 to fetch only the current user's whispers
- * (used for cross-device sync).
+ * (used for cross-device sync when signed in).
+ * Pass sessionId + mine=1 to fetch this browser's anonymous whispers.
  */
 export async function listWhispers(
   idToken?: string,
-  mineOnly = false
+  mineOnly = false,
+  sessionId?: string
 ): Promise<WhisperListResponse> {
   const headers: Record<string, string> = { Accept: "application/json" };
   if (idToken) headers.Authorization = `Bearer ${idToken}`;
-  const url = `${API_URL}/whispers${mineOnly ? "?mine=1" : ""}`;
+  const params = new URLSearchParams();
+  if (mineOnly) params.set("mine", "1");
+  if (sessionId && mineOnly) params.set("sessionId", sessionId);
+  const qs = params.toString();
+  const url = `${API_URL}/whispers${qs ? "?" + qs : ""}`;
   const res = await fetch(url, { headers });
   return handle<WhisperListResponse>(res);
 }
 
 /**
- * POST /api/whispers — create a whisper. Requires auth.
+ * POST /api/whispers — create a whisper.
+ * Auth is OPTIONAL: pass idToken if signed in (enables cross-device sync),
+ * omit it for anonymous whispers (tied to sessionId / this browser only).
  */
 export async function createWhisper(
-  idToken: string,
-  body: { text: string; mood: WhisperMood; author?: string }
+  body: { text: string; mood: WhisperMood; author?: string; sessionId?: string },
+  idToken?: string
 ): Promise<{ whisper: Whisper }> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  if (idToken) headers.Authorization = `Bearer ${idToken}`;
   const res = await fetch(`${API_URL}/whispers`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      Authorization: `Bearer ${idToken}`,
-    },
+    headers,
     body: JSON.stringify(body),
   });
   return handle<{ whisper: Whisper }>(res);
