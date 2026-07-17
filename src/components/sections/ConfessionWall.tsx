@@ -575,12 +575,14 @@ export default function ConfessionWall({
     );
   }
 
-  /** Witness a confession: optimistic +1, send to API, sync on response. */
-  async function handleWitness(noteId: string | number) {
+  /** Record a view on a confession: optimistic +1, send to API, sync on response.
+   *  Dedup by session — one view per browser per confession. Called when
+   *  the user clicks a card to open it. No-op if already viewed. */
+  async function handleView(noteId: string | number) {
     const idStr = String(noteId);
-    if (witnessed.has(idStr)) return; // already witnessed — no-op
+    if (witnessed.has(idStr)) return; // already viewed — no-op
 
-    // Optimistic: immediately mark as witnessed + bump count in local state
+    // Optimistic: immediately mark as viewed + bump count in local state
     const newWitnessed = new Set(witnessed);
     newWitnessed.add(idStr);
     setWitnessed(newWitnessed);
@@ -603,7 +605,7 @@ export default function ConfessionWall({
       // Success — optimistic state is correct, nothing more to do
     } catch (err) {
       // Roll back on failure
-      console.warn("[witness] failed, rolling back:", err);
+      console.warn("[view] failed, rolling back:", err);
       const rolledBack = new Set(witnessed);
       rolledBack.delete(idStr);
       setWitnessed(rolledBack);
@@ -897,7 +899,13 @@ export default function ConfessionWall({
                   style={{ top: style.top, left: style.left, width: style.width }}
                 >
                   <motion.button
-                    onClick={() => setOpen(n)}
+                    onClick={() => {
+                      // Record a view (dedup per session) then open the modal.
+                      // The view count is shown on the card + in the modal,
+                      // so the author can see how many people opened it.
+                      handleView(n.id);
+                      setOpen(n);
+                    }}
                     data-hover="READ"
                     aria-label={`Open confession #${n.id}`}
                     initial={false}
@@ -960,24 +968,17 @@ export default function ConfessionWall({
                         — {n.author}
                       </span>
                       <div className="flex shrink-0 items-center gap-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleWitness(n.id);
-                          }}
-                          disabled={n.witnessed}
-                          data-hover={n.witnessed ? "SEEN" : "WITNESS"}
-                          aria-label={n.witnessed ? "Already witnessed" : "Witness this confession"}
-                          className={
-                            "inline-flex items-center gap-1 rounded-full border border-current px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide transition-[transform,opacity,background-color] duration-150 " +
-                            (n.witnessed
-                              ? "opacity-50 cursor-default"
-                              : "hover:scale-110 hover:bg-current/10")
-                          }
+                        {/* View count badge — non-interactive. Increments
+                            automatically when the card is opened (dedup
+                            per session). The author can see this on their
+                            own confessions to know how many people viewed. */}
+                        <span
+                          title={`${n.witnessCount ?? 0} view${(n.witnessCount ?? 0) === 1 ? "" : "s"}`}
+                          className="inline-flex items-center gap-1 rounded-full border border-current px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide opacity-70"
                         >
                           <span>👁️</span>
                           <span className="tabular-nums">{n.witnessCount ?? 0}</span>
-                        </button>
+                        </span>
                         {/* Report button — only on user confessions (string id) */}
                         {typeof n.id === "string" && (
                           <button
@@ -1199,8 +1200,12 @@ export default function ConfessionWall({
                 <span className="font-display text-sm font-extrabold uppercase tracking-wide">
                   — {open.author}
                 </span>
-                <span className="font-hand text-base font-bold opacity-60">
-                  stay anonymous · stay honest
+                {/* View count — visible to everyone, but especially useful
+                    for the author to see how many people opened their confession. */}
+                <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-current/40 px-3 py-1 font-display text-xs font-extrabold uppercase tracking-wide opacity-80">
+                  <span>👁️</span>
+                  <span className="tabular-nums">{open.witnessCount ?? 0}</span>
+                  <span className="opacity-60">{(open.witnessCount ?? 0) === 1 ? "view" : "views"}</span>
                 </span>
               </div>
 
