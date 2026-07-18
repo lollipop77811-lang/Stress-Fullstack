@@ -957,8 +957,10 @@ export default function ConfessionWall({
                       </span>
                     )}
 
-                    {/* Truncated confession text */}
-                    <p className="relative line-clamp-5 font-hand text-sm font-bold leading-snug sm:text-base">
+                    {/* Truncated confession text — preserve the user's
+                        original whitespace (line breaks + multiple spaces)
+                        so the confession appears exactly as typed. */}
+                    <p className="relative line-clamp-5 whitespace-pre-wrap break-words font-hand text-sm font-bold leading-snug sm:text-base">
                       {n.text}
                     </p>
 
@@ -1191,8 +1193,10 @@ export default function ConfessionWall({
                 )}
               </div>
 
-              {/* Full confession */}
-              <p className="font-hand text-2xl font-bold leading-tight sm:text-3xl">
+              {/* Full confession — preserve the user's original whitespace
+                  (line breaks + multiple spaces) so the confession appears
+                  exactly as the author typed it. */}
+              <p className="whitespace-pre-wrap break-words font-hand text-2xl font-bold leading-tight sm:text-3xl">
                 {open.text}
               </p>
 

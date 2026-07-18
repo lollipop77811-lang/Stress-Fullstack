@@ -449,8 +449,9 @@ export default function MyConfessions() {
                         </span>
                       )}
 
-                      {/* Text */}
-                      <p className="relative line-clamp-5 font-hand text-sm font-bold leading-snug sm:text-base">
+                      {/* Text — preserve the author's original whitespace
+                          (line breaks + multiple spaces). */}
+                      <p className="relative line-clamp-5 whitespace-pre-wrap break-words font-hand text-sm font-bold leading-snug sm:text-base">
                         {n.text}
                       </p>
 
@@ -556,8 +557,9 @@ export default function MyConfessions() {
                   </>
                 )}
               </div>
-              {/* Full text */}
-              <p className="font-hand text-2xl font-bold leading-tight sm:text-3xl">
+              {/* Full text — preserve the author's original whitespace
+                  (line breaks + multiple spaces). */}
+              <p className="whitespace-pre-wrap break-words font-hand text-2xl font-bold leading-tight sm:text-3xl">
                 {open.text}
               </p>
               <div className="mt-6 flex items-center justify-between border-t-2 border-current/20 pt-4">

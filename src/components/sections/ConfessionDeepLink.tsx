@@ -250,8 +250,9 @@ function ConfessionCard({
           )}
         </div>
 
-        {/* The confession text */}
-        <p className="font-hand text-3xl font-bold leading-tight sm:text-4xl">
+        {/* The confession text — preserve the author's original whitespace
+            (line breaks + multiple spaces) so it renders exactly as typed. */}
+        <p className="whitespace-pre-wrap break-words font-hand text-3xl font-bold leading-tight sm:text-4xl">
           "{confession.text}"
         </p>
 
