@@ -226,7 +226,7 @@ export default function DailyStressHoroscope() {
     <section
       id="horoscope"
       ref={root}
-      className="relative min-h-screen overflow-hidden px-4 py-20 sm:px-6 sm:py-28"
+      className="relative min-h-[100dvh] overflow-hidden px-4 py-20 sm:px-6 sm:py-28"
       style={{ backgroundColor: "var(--color-cream)" }}
     >
       {/* Decorative background */}
@@ -247,7 +247,7 @@ export default function DailyStressHoroscope() {
           <p className="mt-2 text-xs font-extrabold uppercase tracking-[0.3em] text-electric">
             🔮 Daily Horoscope
           </p>
-          <h1 className="mt-2 font-display text-5xl font-extrabold uppercase leading-[0.9] tracking-tight sm:text-7xl">
+          <h1 className="mt-2 font-display text-4xl font-extrabold uppercase leading-[0.9] tracking-tight sm:text-5xl lg:text-7xl">
             Stress
             <br />
             <span className="text-stroke-thick">Horoscope</span>
@@ -463,7 +463,7 @@ function FeaturedSignCard({ sign, prediction }: { sign: Zodiac; prediction: stri
       </span>
 
       {/* The prediction */}
-      <p className="mt-6 max-w-xl font-hand text-3xl font-bold leading-tight sm:text-4xl">
+      <p className="mt-6 max-w-xl font-hand text-2xl font-bold leading-tight sm:text-3xl">
         "{prediction}"
       </p>
 

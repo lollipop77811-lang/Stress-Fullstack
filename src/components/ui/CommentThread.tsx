@@ -350,7 +350,7 @@ function CommentItem({
       <div className="mt-1.5 flex items-center gap-3">
         <button
           onClick={() => setReplyTo(isReplying ? null : comment.id)}
-          className="text-[10px] font-bold uppercase tracking-wide text-ink/50 transition-colors hover:text-pink"
+          className="min-h-[36px] px-1 text-xs font-bold uppercase tracking-wide text-ink/50 transition-colors hover:text-pink"
         >
           ↳ reply
         </button>
@@ -358,7 +358,7 @@ function CommentItem({
           onClick={() => onReport(comment.id)}
           disabled={isReported}
           className={cn(
-            "text-[10px] font-bold uppercase tracking-wide transition-colors",
+            "min-h-[36px] px-1 text-xs font-bold uppercase tracking-wide transition-colors",
             isReported ? "text-ink/20" : "text-ink/50 hover:text-pink"
           )}
         >

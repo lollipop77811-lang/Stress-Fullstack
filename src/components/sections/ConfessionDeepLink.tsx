@@ -80,7 +80,7 @@ export default function ConfessionDeepLink({ id }: { id: string }) {
     <section
       id="confession-view"
       ref={root}
-      className="relative min-h-screen overflow-hidden px-4 py-20 sm:px-6 sm:py-28"
+      className="relative min-h-[100dvh] overflow-hidden px-4 py-20 sm:px-6 sm:py-28"
       style={{ backgroundColor: "var(--color-cream)" }}
     >
       {/* Decorative background */}

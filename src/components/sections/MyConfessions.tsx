@@ -101,30 +101,47 @@ function agingStyle(aging: Aging): {
   }
 }
 
+/** Number of columns based on viewport width. Mobile = 2, tablet = 3,
+ *  desktop = 4. Used by computeLayout so notes don't overflow on small
+ *  screens. */
+function getCols(): number {
+  if (typeof window === "undefined") return 4;
+  const w = window.innerWidth;
+  if (w < 640) return 2;
+  if (w < 1024) return 3;
+  return 4;
+}
+
 /** Deterministically compute position/rotation/width for a note
- *  based on its id hash — so each note always lands in the same spot. */
-function computeLayout(id: string) {
+ *  based on its id hash — so each note always lands in the same spot.
+ *  `cols` controls the grid density (2 on mobile, 3 on tablet, 4 on desktop). */
+function computeLayout(id: string, cols: number = 4) {
   let h = 0;
   for (let i = 0; i < id.length; i++) {
     h = (h * 31 + id.charCodeAt(i)) >>> 0;
   }
   const rand = (seed: number) => ((h ^ (seed * 2654435761)) >>> 0) / 4294967296;
 
-  // Loose 4-col × 4-row grid with jitter (more rows since we might have up to 20+ notes)
-  const slot = Math.floor(rand(1) * 16);
-  const col = slot % 4;
-  const row = Math.floor(slot / 4);
-  const jitterX = (rand(2) - 0.5) * 12;
+  const totalSlots = cols * 4; // 4 rows
+  const slot = Math.floor(rand(1) * totalSlots);
+  const col = slot % cols;
+  const row = Math.floor(slot / cols);
+  const jitterX = (rand(2) - 0.5) * 8;
   const jitterY = (rand(3) - 0.5) * 8;
-  const left = 4 + col * 23 + jitterX;
+  // Column spacing depends on cols so notes fill the width without overflow
+  const colSpacing = (96 - cols * 4) / cols; // ~44% for 2col, ~28% for 3col, ~20% for 4col
+  const left = 3 + col * colSpacing + jitterX;
   const top = 20 + row * 19 + jitterY;
   const rot = (rand(4) - 0.5) * 18;
-  const w = 160 + Math.floor(rand(5) * 50);
+  // Smaller notes on mobile so they fit in 2-col layout
+  const maxW = cols <= 2 ? 140 : cols === 3 ? 150 : 210;
+  const minW = cols <= 2 ? 110 : cols === 3 ? 130 : 160;
+  const w = minW + Math.floor(rand(5) * (maxW - minW));
   return { top, left, rot, w };
 }
 
-function userConfessionToNote(c: UserConfession): Note {
-  const layout = computeLayout(c.id);
+function userConfessionToNote(c: UserConfession, cols: number = 4): Note {
+  const layout = computeLayout(c.id, cols);
   return {
     id: c.id,
     text: c.text,
@@ -148,6 +165,16 @@ export default function MyConfessions() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<Note | null>(null);
+  // Responsive column count — recompute on resize so the absolute-positioned
+  // note layout doesn't overflow on mobile/tablet.
+  const [cols, setCols] = useState<number>(() => getCols());
+
+  /* Recompute layout when viewport changes (mobile ↔ tablet ↔ desktop) */
+  useEffect(() => {
+    const onResize = () => setCols(getCols());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -192,13 +219,25 @@ export default function MyConfessions() {
     setError(null);
     listMyConfessions(ids)
       .then((list) => {
-        setNotes(list.map(userConfessionToNote));
+        setNotes(list.map((c) => userConfessionToNote(c, getCols())));
       })
       .catch(() => {
         setError("couldn't reach the wall. try again in a sec.");
       })
       .finally(() => setLoading(false));
   }, []);
+
+  /* When cols change (viewport resize), recompute all note positions so
+   * they fit the new column count without overflow. */
+  useEffect(() => {
+    if (notes.length === 0) return;
+    setNotes((prev) =>
+      prev.map((n) => {
+        const layout = computeLayout(n.id, cols);
+        return { ...n, ...layout };
+      })
+    );
+  }, [cols]);
 
   /* Modal: lock scroll + Esc to close */
   useEffect(() => {
@@ -246,7 +285,7 @@ export default function MyConfessions() {
     <section
       id="mine"
       ref={root}
-      className="relative min-h-screen w-full overflow-hidden"
+      className="relative min-h-[100dvh] w-full overflow-hidden"
       style={{
         backgroundColor: "#8b3a2b",
         backgroundImage: BRICK_BG,
@@ -285,28 +324,29 @@ export default function MyConfessions() {
         </div>
       </header>
 
-      {/* Back-home + write-more CTAs */}
+      {/* Back-home + write-more CTAs. Icon-only on mobile to prevent
+          overlap with centered header. */}
       <a
         href="#top"
         data-hover="BACK!"
-        className="mc-reveal absolute left-4 top-6 z-30 inline-flex items-center gap-1.5 rounded-xl border-2 border-cream bg-jet px-3 py-2 font-display text-xs font-bold uppercase tracking-tight text-cream shadow-[3px_3px_0_#fcf7f8] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#fcf7f8]"
+        className="mc-reveal absolute left-3 top-4 z-30 inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border-2 border-cream bg-jet px-3 py-2.5 font-display text-xs font-bold uppercase tracking-tight text-cream shadow-[3px_3px_0_#fcf7f8] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#fcf7f8] sm:left-4 sm:top-6"
       >
-        ← home
+        ← <span className="hidden sm:inline">home</span>
       </a>
-      <div className="mc-reveal absolute right-4 top-6 z-30 flex gap-2">
+      <div className="mc-reveal absolute right-3 top-4 z-30 flex gap-2 sm:right-4 sm:top-6">
         <a
           href="#/wall"
           data-hover="WALL!"
-          className="inline-flex items-center gap-1.5 rounded-xl border-2 border-cream bg-electric px-3 py-2 font-display text-xs font-bold uppercase tracking-tight text-cream shadow-[3px_3px_0_#0b0c10] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#0b0c10]"
+          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border-2 border-cream bg-electric px-3 py-2.5 font-display text-xs font-bold uppercase tracking-tight text-cream shadow-[3px_3px_0_#0b0c10] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#0b0c10]"
         >
-          ← back to wall
+          ← <span className="hidden sm:inline">back to wall</span>
         </a>
         <button
           onClick={() => goToComposer()}
           data-hover="WRITE!"
-          className="inline-flex items-center gap-1.5 rounded-xl border-2 border-jet bg-toxic px-3 py-2 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-[3px_3px_0_#0b0c10] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#0b0c10]"
+          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border-2 border-jet bg-toxic px-3 py-2.5 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-[3px_3px_0_#0b0c10] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#0b0c10]"
         >
-          ✍️ write more
+          ✍️ <span className="hidden sm:inline">write more</span>
         </button>
       </div>
 
@@ -328,7 +368,7 @@ export default function MyConfessions() {
             <motion.div
               animate={{ y: [0, -10, 0], rotate: [-3, 3, -3] }}
               transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-              className="mb-6 text-8xl"
+              className="mb-6 text-6xl sm:text-8xl"
             >
               🗒️
             </motion.div>
@@ -364,7 +404,7 @@ export default function MyConfessions() {
           /* Notes grid */
           <div
             className="relative"
-            style={{ minHeight: `${Math.max(600, Math.ceil(notes.length / 4) * 220)}px` }}
+            style={{ minHeight: `${Math.max(600, Math.ceil(notes.length / cols) * 220)}px` }}
           >
             <AnimatePresence>
               {notes.map((n) => {
@@ -497,7 +537,7 @@ export default function MyConfessions() {
               exit={{ scale: 0.4, rotate: 8, opacity: 0 }}
               transition={{ type: "spring", stiffness: 260, damping: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-md p-8 sm:p-12"
+              className="relative w-full max-w-md max-h-[90vh] overflow-y-auto p-6 sm:p-8"
               style={{
                 backgroundColor: COLOR_MAP[open.color].bg,
                 color: COLOR_MAP[open.color].text,
@@ -526,7 +566,7 @@ export default function MyConfessions() {
                 onClick={() => setOpen(null)}
                 data-hover="CLOSE"
                 aria-label="Close"
-                className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-lg border-2 border-current bg-current/0 text-lg font-bold transition-transform hover:rotate-90"
+                className="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-lg border-2 border-current bg-current/0 text-lg font-bold transition-transform hover:rotate-90 z-10"
               >
                 ✕
               </button>

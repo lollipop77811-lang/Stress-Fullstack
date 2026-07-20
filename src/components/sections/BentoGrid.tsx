@@ -255,7 +255,7 @@ export default function BentoGrid() {
         </div>
 
         {/* Bento grid */}
-        <div className="grid auto-rows-[150px] grid-cols-2 gap-4 md:auto-rows-[185px] md:grid-cols-4 md:gap-5 [grid-auto-flow:dense]">
+        <div className="grid auto-rows-[150px] grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-4 md:auto-rows-[185px] md:grid-cols-4 md:gap-5 [grid-auto-flow:dense]">
           {CARDS.map((card) => (
             <BentoCard key={card.id} card={card} />
           ))}

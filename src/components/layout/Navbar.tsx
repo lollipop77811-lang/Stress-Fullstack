@@ -85,7 +85,7 @@ export default function Navbar({
               <a
                 href="#/account"
                 data-hover="ME!"
-                className="flex items-center gap-1.5 rounded-xl border-2 border-jet bg-toxic px-2.5 py-2 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-brutal-sm transition-transform duration-150 hover:-translate-y-0.5"
+                className="flex min-h-[44px] items-center gap-1.5 rounded-xl border-2 border-jet bg-toxic px-2.5 py-2.5 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-brutal-sm transition-transform duration-150 hover:-translate-y-0.5"
               >
                 {auth.account?.avatarUrl ? (
                   <img
@@ -105,7 +105,7 @@ export default function Navbar({
               <button
                 onClick={onAuthClick}
                 data-hover="LOGIN!"
-                className="rounded-xl border-2 border-jet bg-cream px-3 py-2 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-brutal-sm transition-transform duration-150 hover:-translate-y-0.5"
+                className="rounded-xl border-2 border-jet bg-cream px-3 py-2.5 min-h-[44px] font-display text-xs font-bold uppercase tracking-tight text-jet shadow-brutal-sm transition-transform duration-150 hover:-translate-y-0.5"
               >
                 <span className="sm:hidden">👤</span>
                 <span className="hidden sm:inline">Sign In</span>

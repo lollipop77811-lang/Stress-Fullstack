@@ -128,14 +128,14 @@ export default function AuthModal({
             exit={{ scale: 0.85, y: 20, opacity: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 22 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md overflow-hidden rounded-[2rem] border-[3px] border-jet bg-cream p-6 shadow-brutal-xl sm:p-8"
+            className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[2rem] border-[3px] border-jet bg-cream p-6 shadow-brutal-xl sm:p-8"
           >
             {/* Close */}
             <button
               onClick={onClose}
               data-hover="CLOSE"
               aria-label="Close"
-              className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-lg border-2 border-jet bg-cream text-lg font-bold transition-transform hover:rotate-90"
+              className="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-lg border-2 border-jet bg-cream text-lg font-bold transition-transform hover:rotate-90 z-10"
             >
               ✕
             </button>

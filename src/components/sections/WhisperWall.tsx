@@ -741,7 +741,7 @@ export default function WhisperWall({
                       disabled={w.dissolved}
                       data-hover={w.dissolved ? "GONE" : "WITNESS"}
                       className={cn(
-                        "inline-flex items-center gap-1.5 rounded-full border-2 border-jet px-3 py-1 text-[11px] font-bold uppercase tracking-tight transition-[transform,box-shadow] duration-150",
+                        "inline-flex min-h-[36px] items-center gap-1.5 rounded-full border-2 border-jet px-3 py-2 text-xs font-bold uppercase tracking-tight transition-[transform,box-shadow] duration-150",
                         w.dissolved
                           ? "cursor-default bg-toxic text-jet/40"
                           : w.witnessed

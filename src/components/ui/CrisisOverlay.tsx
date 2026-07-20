@@ -29,7 +29,7 @@ export default function CrisisOverlay({
             exit={{ scale: 0.8, y: 20, opacity: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 22 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-lg overflow-hidden rounded-[2rem] border-[3px] border-cream bg-jet p-7 text-cream shadow-brutal-xl sm:p-10"
+            className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-[2rem] border-[3px] border-cream bg-jet p-7 text-cream shadow-brutal-xl sm:p-10"
           >
             {/* Top accent bar */}
             <div className="absolute left-0 right-0 top-0 h-2 bg-pink" />

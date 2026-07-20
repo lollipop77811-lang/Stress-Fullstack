@@ -781,7 +781,7 @@ export default function ConfessionWall({
     <section
       id="wall"
       ref={root}
-      className="relative h-screen w-full overflow-hidden"
+      className="relative h-[100dvh] w-full overflow-hidden"
       style={{
         backgroundColor: "#8b3a2b",
         backgroundImage: BRICK_BG,
@@ -1050,32 +1050,33 @@ export default function ConfessionWall({
         </button>
       </div>
 
-      {/* Back-home CTA — top-left */}
+      {/* Back-home CTA — top-left. Icon-only on mobile, full text on sm+ */}
       <a
         href="#top"
         data-hover="BACK!"
-        className="cw-reveal absolute left-4 top-6 z-30 inline-flex items-center gap-1.5 rounded-xl border-2 border-cream bg-jet px-3 py-2 font-display text-xs font-bold uppercase tracking-tight text-cream shadow-[3px_3px_0_#fcf7f8] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#fcf7f8]"
+        className="cw-reveal absolute left-3 top-4 z-30 inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border-2 border-cream bg-jet px-3 py-2.5 font-display text-xs font-bold uppercase tracking-tight text-cream shadow-[3px_3px_0_#fcf7f8] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#fcf7f8] sm:left-4 sm:top-6"
       >
-        ← home
+        ← <span className="hidden sm:inline">home</span>
       </a>
 
-      {/* Top-right CTA cluster: "My Confessions" + "Write yours" */}
-      <div className="cw-reveal absolute right-4 top-6 z-30 flex flex-wrap items-center justify-end gap-2">
+      {/* Top-right CTA cluster: "My Confessions" + "Write yours".
+          Icon-only on mobile to prevent overlap with centered header. */}
+      <div className="cw-reveal absolute right-3 top-4 z-30 flex items-center justify-end gap-2 sm:right-4 sm:top-6">
         {/* My Confessions — opens #/mine route showing all user's confessions */}
         <a
           href="#/mine"
           data-hover="MINE!"
-          className="inline-flex items-center gap-1.5 rounded-xl border-2 border-cream bg-pink px-3 py-2 font-display text-xs font-bold uppercase tracking-tight text-cream shadow-[3px_3px_0_#0b0c10] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#0b0c10]"
+          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border-2 border-cream bg-pink px-3 py-2.5 font-display text-xs font-bold uppercase tracking-tight text-cream shadow-[3px_3px_0_#0b0c10] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#0b0c10]"
         >
-          ★ my confessions
+          ★ <span className="hidden sm:inline">my confessions</span>
         </a>
         {/* Write your own — scrolls down to the composer */}
         <button
           onClick={() => document.getElementById("composer")?.scrollIntoView({ behavior: "smooth" })}
           data-hover="WRITE!"
-          className="inline-flex items-center gap-1.5 rounded-xl border-2 border-jet bg-toxic px-3 py-2 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-[3px_3px_0_#0b0c10] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#0b0c10]"
+          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border-2 border-jet bg-toxic px-3 py-2.5 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-[3px_3px_0_#0b0c10] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#0b0c10]"
         >
-          ✍️ write yours ↓
+          ✍️ <span className="hidden sm:inline">write yours ↓</span>
         </button>
       </div>
 
@@ -1156,7 +1157,7 @@ export default function ConfessionWall({
                 onClick={() => setOpen(null)}
                 data-hover="CLOSE"
                 aria-label="Close"
-                className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-lg border-2 border-current bg-current/0 text-lg font-bold transition-transform hover:rotate-90"
+                className="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-lg border-2 border-current bg-current/0 text-lg font-bold transition-transform hover:rotate-90 z-10"
               >
                 ✕
               </button>

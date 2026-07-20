@@ -53,7 +53,11 @@ export default function ShareButtons({ text, author, id, className }: Props) {
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
       shareText
     )}&url=${encodeURIComponent(shareUrl)}`;
-    window.open(url, "_blank", "noopener,noreferrer,width=600,height=500");
+    // On mobile, don't pass window size — popup blockers will reject it
+    // and the size is wrong for small screens anyway. Plain _blank opens
+    // a new tab which mobile browsers handle natively.
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    window.open(url, "_blank", isMobile ? "noopener,noreferrer" : "noopener,noreferrer,width=600,height=500");
   };
 
   const shareWhatsApp = () => {
@@ -92,7 +96,7 @@ export default function ShareButtons({ text, author, id, className }: Props) {
         data-hover="COPY!"
         aria-label="Copy link"
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-lg border-2 border-jet px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-tight shadow-[2px_2px_0_#0b0c10] transition-[transform,box-shadow] duration-150",
+          "inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border-2 border-jet px-4 py-2.5 font-display text-xs font-bold uppercase tracking-tight shadow-[2px_2px_0_#0b0c10] transition-[transform,box-shadow] duration-150",
           copied
             ? "bg-toxic text-jet"
             : "bg-cream text-jet hover:shadow-[3px_3px_0_#0b0c10]"
@@ -109,7 +113,7 @@ export default function ShareButtons({ text, author, id, className }: Props) {
         whileTap={{ scale: 0.96 }}
         data-hover="TWEET!"
         aria-label="Share on X"
-        className="inline-flex items-center gap-1.5 rounded-lg border-2 border-jet bg-jet px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-tight text-cream shadow-[2px_2px_0_#0b0c10] transition-[transform,box-shadow] duration-150 hover:shadow-[3px_3px_0_#0b0c10]"
+        className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border-2 border-jet bg-jet px-4 py-2.5 font-display text-xs font-bold uppercase tracking-tight text-cream shadow-[2px_2px_0_#0b0c10] transition-[transform,box-shadow] duration-150 hover:shadow-[3px_3px_0_#0b0c10]"
       >
         <span>𝕏</span>
         post
@@ -122,7 +126,7 @@ export default function ShareButtons({ text, author, id, className }: Props) {
         whileTap={{ scale: 0.96 }}
         data-hover="SEND!"
         aria-label="Share on WhatsApp"
-        className="inline-flex items-center gap-1.5 rounded-lg border-2 border-jet bg-[#25D366] px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-tight text-jet shadow-[2px_2px_0_#0b0c10] transition-[transform,box-shadow] duration-150 hover:shadow-[3px_3px_0_#0b0c10]"
+        className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border-2 border-jet bg-[#25D366] px-4 py-2.5 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-[2px_2px_0_#0b0c10] transition-[transform,box-shadow] duration-150 hover:shadow-[3px_3px_0_#0b0c10]"
       >
         <span>💬</span>
         whatsapp
@@ -136,7 +140,7 @@ export default function ShareButtons({ text, author, id, className }: Props) {
           whileTap={{ scale: 0.96 }}
           data-hover="SHARE!"
           aria-label="Share via device"
-          className="inline-flex items-center gap-1.5 rounded-lg border-2 border-jet bg-electric px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-tight text-cream shadow-[2px_2px_0_#0b0c10] transition-[transform,box-shadow] duration-150 hover:shadow-[3px_3px_0_#0b0c10]"
+          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border-2 border-jet bg-electric px-4 py-2.5 font-display text-xs font-bold uppercase tracking-tight text-cream shadow-[2px_2px_0_#0b0c10] transition-[transform,box-shadow] duration-150 hover:shadow-[3px_3px_0_#0b0c10]"
         >
           <span>📤</span>
           share

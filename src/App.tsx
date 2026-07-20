@@ -224,7 +224,7 @@ export default function App() {
     <SmoothScroll>
       <CustomCursor />
 
-      <div className="relative flex min-h-screen flex-col">
+      <div className="relative flex min-h-[100dvh] flex-col">
         <Navbar
           auth={auth}
           onAuthClick={() => setShowAuthModal(true)}

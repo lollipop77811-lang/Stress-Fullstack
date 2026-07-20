@@ -148,20 +148,20 @@ export default function AccountPage({ auth }: { auth: ReturnType<typeof useAuth>
 
             {!editingUsername ? (
               <div className="mt-1 flex items-center gap-3">
-                <p className="font-display text-3xl font-extrabold uppercase tracking-tight text-jet">
+                <p className="font-display text-2xl font-extrabold uppercase tracking-tight text-jet break-all sm:text-3xl">
                   {account.username}
                 </p>
                 <button
                   onClick={startEditingUsername}
                   data-hover="EDIT!"
-                  className="rounded-lg border-2 border-jet bg-toxic px-3 py-1 font-display text-[10px] font-bold uppercase tracking-tight text-jet shadow-sm transition-transform duration-150 hover:-translate-y-0.5"
+                  className="shrink-0 rounded-lg border-2 border-jet bg-toxic px-3 py-2 min-h-[44px] font-display text-[10px] font-bold uppercase tracking-tight text-jet shadow-sm transition-transform duration-150 hover:-translate-y-0.5"
                 >
                   ✏️ edit
                 </button>
               </div>
             ) : (
               <div className="mt-2 space-y-2">
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <input
                     type="text"
                     value={newUsername}

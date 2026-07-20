@@ -226,7 +226,7 @@ export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthC
                     type="button"
                     onClick={() => onAuthClick?.()}
                     data-hover="JOIN!"
-                    className="shrink-0 rounded-lg border-2 border-cream bg-toxic px-4 py-2 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-sm transition-transform hover:-translate-y-0.5"
+                    className="shrink-0 rounded-lg border-2 border-cream bg-toxic px-4 py-2.5 font-display text-xs font-bold uppercase tracking-tight text-jet shadow-sm transition-transform hover:-translate-y-0.5 min-h-[44px]"
                   >
                     Sign in →
                   </button>
@@ -253,7 +253,7 @@ export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthC
                         title={c.label}
                         aria-label={`Color: ${c.label}`}
                         className={cn(
-                          "h-9 w-9 rounded-lg border-2 border-jet transition-transform duration-150",
+                          "h-11 w-11 rounded-lg border-2 border-jet transition-transform duration-150",
                           on
                             ? "scale-110 shadow-[3px_3px_0_#0b0c10]"
                             : "hover:-translate-y-0.5 hover:shadow-[2px_2px_0_#0b0c10]"
@@ -281,7 +281,7 @@ export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthC
                         data-hover={a.label.toUpperCase()}
                         title={`${a.label} — ${a.sub}`}
                         className={cn(
-                          "inline-flex items-center gap-1 rounded-full border-2 border-jet px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight transition-[transform,box-shadow] duration-150",
+                          "inline-flex min-h-[36px] items-center gap-1 rounded-full border-2 border-jet px-2.5 py-2 text-[11px] font-bold uppercase tracking-tight transition-[transform,box-shadow] duration-150",
                           on
                             ? "bg-jet text-cream shadow-[2px_2px_0_#fcf7f8]"
                             : "bg-cream/60 text-jet hover:-translate-y-0.5 hover:shadow-[2px_2px_0_#0b0c10]"
@@ -327,15 +327,15 @@ export default function ConfessionComposer({ wallIdx, onSubmitted, auth, onAuthC
                 type="button"
                 onClick={() => setCommentsEnabled((v) => !v)}
                 className={cn(
-                  "relative h-7 w-12 rounded-full border-2 border-jet transition-colors duration-200",
+                  "relative h-9 w-14 rounded-full border-2 border-jet transition-colors duration-200",
                   commentsEnabled ? "bg-toxic" : "bg-paper"
                 )}
                 aria-label={commentsEnabled ? "Comments enabled" : "Comments disabled"}
               >
                 <motion.span
-                  animate={{ x: commentsEnabled ? 22 : 2 }}
+                  animate={{ x: commentsEnabled ? 26 : 2 }}
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                  className="absolute top-0.5 h-5 w-5 rounded-full border-2 border-jet bg-cream"
+                  className="absolute top-0.5 h-6 w-6 rounded-full border-2 border-jet bg-cream"
                 />
               </button>
               <span className="font-display text-xs font-extrabold uppercase tracking-tight text-ink/70">
